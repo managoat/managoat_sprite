@@ -158,16 +158,17 @@ defmodule Managoat.Sprite.Runtime do
     end)
   end
 
-  def instructions do
-    case File.read(Path.join(Config.root(), "config/instructions.md")) do
-      {:ok, s} -> s
-      _ -> "You are the workspace agent. Work in the configured project directory."
-    end
-  end
+  def instructions, do: Config.instructions()
 
   def start(owner) do
-    {cmd, args} = Runtimes.ACP.command(Config.get()["runtime"])
-    Execution.start(resolve(cmd), args, owner: owner, env: env(), dir: Config.get()["workspace"])
+    c = Config.get()
+    {cmd, args} = Runtimes.ACP.command(c["runtime"])
+    handle = Managoat.Sprite.Sandbox.Local.build_handle("launch")
+    agent = %{name: c["name"], model: c["model"], system: instructions(), mcp_servers: %{}}
+
+    with :ok <- Runtimes.Instructions.write(handle, c["runtime"], agent) do
+      Execution.start(resolve(cmd), args, owner: owner, env: env(), dir: c["workspace"])
+    end
   end
 
   def write(pid, data), do: Execution.write(pid, data)

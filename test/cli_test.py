@@ -111,6 +111,7 @@ class InstallerTests(unittest.TestCase):
         home.mkdir(parents=True)
         (home/'session.json').write_text('retained runtime session')
         (home/'auth.json').write_text('private provider login')
+        (cli.ROOT/'config/instructions.md').write_text('Preserved agent instructions')
         target = self.root/'backup.tar.gz'
         with patch.object(cli, 'offline', contextlib.nullcontext), contextlib.redirect_stdout(io.StringIO()):
             cli.backup(argparse.Namespace(output=str(target), workspace=True))
@@ -127,6 +128,7 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual((new_root/'project/keep.txt').read_text(), 'project contents')
         self.assertEqual((new_root/'runtime/home/session.json').read_text(), 'retained runtime session')
         self.assertFalse((new_root/'runtime/home/auth.json').exists())
+        self.assertEqual((new_root/'config/instructions.md').read_text(), 'Preserved agent instructions')
         self.assertNotEqual((new_root/'config/client.key').read_text().strip(), os.environ['MANAGOAT_API_KEY'])
 
     def prepare_upgrade(self):

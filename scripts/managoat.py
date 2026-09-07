@@ -214,6 +214,8 @@ def backup(args):
             copy.close()
             db.close()
         shutil.copy2(CONFIG, stage / 'config.json')
+        if (ROOT / 'config/instructions.md').exists():
+            shutil.copy2(ROOT / 'config/instructions.md', stage / 'instructions.md')
         runtime_home = ROOT / 'runtime/home'
         if runtime_home.exists():
             shutil.copytree(runtime_home, stage / 'runtime_home', symlinks=True,
@@ -336,6 +338,8 @@ def restore(args):
         name = 'OPENAI_API_KEY' if c['runtime'] == 'codex' else 'ANTHROPIC_API_KEY'
         write_private(ROOT / 'config/credentials.json', json.dumps({name: credential}))
         write_private(ROOT / 'config/client.key', 'mgt_' + secrets.token_urlsafe(32) + '\n')
+        if (stage / 'instructions.md').exists():
+            write_private(ROOT / 'config/instructions.md', (stage / 'instructions.md').read_text())
         write_private(CONFIG, json.dumps(c, indent=2))
         install(argparse.Namespace(runtime=c['runtime'], workspace=c['workspace'],
             credential_env=None, credential_file=None, port=c.get('port',8080),

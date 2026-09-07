@@ -69,6 +69,12 @@ One turn runs at a time. Deleting a conversation preserves your Sprite and
 project files. The service and agent share the same trust boundary; the agent
 has access to the computer on which you install it.
 
+Conversations retain an immutable reference to their runtime, workspace and
+system instructions. A follow-up fails with `configuration_changed` if those
+have changed. Restore the original definition or explicitly start a new
+conversation. Model selection and effective permissions are recorded per turn;
+tightening installation permissions also tightens subsequent follow-up turns.
+
 ## Persistence and operation
 
 The default application root is `~/.local/share/managoat`; `MANAGOAT_ROOT`

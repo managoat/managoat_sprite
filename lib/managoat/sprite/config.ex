@@ -82,6 +82,27 @@ defmodule Managoat.Sprite.Config do
 
   def get, do: Application.fetch_env!(:managoat_sprite, :config)
 
+  def instructions do
+    case File.read(Path.join(root(), "config/instructions.md")) do
+      {:ok, text} ->
+        text
+
+      {:error, :enoent} ->
+        "You are the workspace agent. Work in the configured project directory."
+
+      {:error, _} ->
+        raise ArgumentError, "cannot read configured instructions"
+    end
+  end
+
+  def launch_configuration do
+    Map.take(get(), ~w(runtime workspace))
+    |> Map.put(
+      "instructions_sha256",
+      :crypto.hash(:sha256, instructions()) |> Base.encode16(case: :lower)
+    )
+  end
+
   def private_write!(path, bytes) do
     File.mkdir_p!(Path.dirname(path))
     File.chmod!(Path.dirname(path), 0o700)

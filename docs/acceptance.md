@@ -8,7 +8,7 @@ asset is claimed to exist yet.
 
 | Check | Result |
 |---|---|
-| Elixir `mix check` | 17 tests pass: real ACP ScriptedAgent, HTTP auth/CORS, continuity, normalized blocks, idempotency, pagination, permissions, concurrent admission, recovery, cancellation, output budget, unavailable task hold and subprocess behavior |
+| Elixir `mix check` | 22 tests cover real ACP ScriptedAgent, HTTP auth/CORS, continuity, normalized blocks, idempotency, pagination, permissions, concurrent admission, recovery, cancellation, output budget, unavailable task hold, subprocess behavior, immutable launch definitions and permission tightening on follow-up and pending recovery |
 | Python management tests on macOS | 10 pass; Linux watchdog test skipped on macOS |
 | Python tests on Linux | All 11 pass, including the watchdog with real detached grandchildren, BEAM substitute SIGKILL, restart, shutdown cleanup and split-write credential redaction |
 | Release packaging | Bundled ERTS release built on x86_64 Linux; no Elixir compilation required by the installer |
@@ -65,8 +65,17 @@ The full contract remains [the specification](spec.md). In particular:
 - The full fault matrix at dispatch, permission-answer and completion
   boundaries; renewal failures; slow readers; corrupt sessions and database;
   disk exhaustion; and real maintenance failure tests on a Sprite.
-- Final audit of immutable launch configuration, readiness detail, installer
+- Final audit of readiness detail, installer
   preflight diagnostics and all resource bounds against the specification.
+
+Launch definitions now have durable `agents` snapshots referenced by each
+conversation and turn. Pre-release history created before these snapshots
+existed remains readable but cannot prove its original launch configuration;
+follow-up returns `configuration_snapshot_unavailable` instead of inventing
+one. This affects development installations, not a previously published release.
+The snapshot implementation passed another live Codex sequence: three completed
+turns, context recall after service restart, tool execution, cursor replay and
+workspace preservation after conversation deletion.
 
 Local and live checks above establish the tested behavior only; they do not
 stand in for these remaining gates.

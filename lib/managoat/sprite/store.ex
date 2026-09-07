@@ -13,7 +13,10 @@ defmodule Managoat.Sprite.Store do
   def init(_) do
     Ecto.Migrator.run(
       Repo,
-      [{20_260_907_000_000, Managoat.Sprite.Repo.Migrations.Initialize}],
+      [
+        {20_260_907_000_000, Managoat.Sprite.Repo.Migrations.Initialize},
+        {20_260_907_000_001, Managoat.Sprite.Repo.Migrations.AgentConfigurations}
+      ],
       :up,
       all: true,
       log: false
@@ -84,6 +87,24 @@ defmodule Managoat.Sprite.Store do
     do: records("SELECT record FROM turns WHERE conversation_id=? ORDER BY number", [id])
 
   defp operate({:turn, id}), do: one("SELECT record FROM turns WHERE id=?", [id])
+
+  defp operate({:launch, id}) do
+    turn = operate({:turn, id})
+    conversation = turn && get_conversation(turn["conversation_id"])
+
+    with :ok <- compatible_configuration(conversation) do
+      policy =
+        Managoat.ACP.Permissions.effective(Config.get()["permissions"], turn["permission_policy"])
+
+      query("UPDATE turns SET record=? WHERE id=?", [
+        Jason.encode!(Map.put(turn, "permission_policy", policy)),
+        id
+      ])
+
+      :ok
+    end
+  end
+
   defp operate({:permission, id}), do: one("SELECT record FROM permissions WHERE id=?", [id])
   defp operate(:latest), do: rows("SELECT coalesce(max(id),0) FROM events") |> hd() |> hd()
 
@@ -296,6 +317,9 @@ defmodule Managoat.Sprite.Store do
       existing && existing["status"] in ["terminated", "failed"] ->
         {:error, {410, "gone"}}
 
+      existing && compatible_configuration(existing) != :ok ->
+        compatible_configuration(existing)
+
       active && active["conversation_id"] == id ->
         {:error, {400, "conversation_busy"}}
 
@@ -320,6 +344,13 @@ defmodule Managoat.Sprite.Store do
           "usage" => nil,
           "exit_code" => nil,
           "model_selection" => nil,
+          "requested_model" => Config.get()["model"],
+          "configuration_id" => c["configuration_id"],
+          "permission_policy" =>
+            Managoat.ACP.Permissions.effective(
+              Config.get()["permissions"],
+              c["permission_policy"]
+            ),
           "image_count" => 0
         }
 
@@ -351,12 +382,20 @@ defmodule Managoat.Sprite.Store do
 
   defp new_conversation(attrs) do
     config = Config.get()
+    launch = Config.launch_configuration()
+    configuration_id = digest(:erlang.term_to_binary(Enum.sort(launch)))
+
+    query(
+      "INSERT OR IGNORE INTO agents(id,agent_id,record) VALUES(?,?,?)",
+      [configuration_id, "default", Jason.encode!(launch)]
+    )
 
     %{
       "id" => Config.id(),
       "title" => attrs["title"],
       "first_prompt" => attrs["prompt"],
       "agent_id" => "default",
+      "configuration_id" => configuration_id,
       "runtime" => config["runtime"],
       "acp" => true,
       "status" => "pending",
@@ -371,6 +410,20 @@ defmodule Managoat.Sprite.Store do
       "inserted_at" => Config.now(),
       "updated_at" => Config.now()
     }
+  end
+
+  defp compatible_configuration(nil), do: {:error, {404, "not_found"}}
+
+  defp compatible_configuration(c) do
+    stored =
+      c["configuration_id"] &&
+        one("SELECT record FROM agents WHERE id=?", [c["configuration_id"]])
+
+    cond do
+      is_nil(stored) -> {:error, {409, "configuration_snapshot_unavailable"}}
+      stored != Config.launch_configuration() -> {:error, {409, "configuration_changed"}}
+      true -> :ok
+    end
   end
 
   defp get_conversation(id), do: one("SELECT record FROM conversations WHERE id=?", [id])

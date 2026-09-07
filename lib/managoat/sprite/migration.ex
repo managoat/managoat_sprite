@@ -66,3 +66,15 @@ defmodule Managoat.Sprite.Repo.Migrations.Initialize do
     end
   end
 end
+
+defmodule Managoat.Sprite.Repo.Migrations.AgentConfigurations do
+  use Ecto.Migration
+
+  def change do
+    create table(:agents, primary_key: false) do
+      add(:id, :text, primary_key: true)
+      add(:agent_id, :text, null: false)
+      add(:record, :text, null: false)
+    end
+  end
+end

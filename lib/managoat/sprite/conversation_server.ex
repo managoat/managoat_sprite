@@ -25,7 +25,9 @@ defmodule Managoat.Sprite.ConversationServer do
   def handle_continue(:start, s) do
     runtime = Engine.runtime()
 
-    with :ok <- Lifecycle.acquire(s.hold), {:ok, command} <- runtime.start(self()) do
+    with :ok <- Store.call({:launch, s.turn["id"]}),
+         :ok <- Lifecycle.acquire(s.hold),
+         {:ok, command} <- runtime.start(self()) do
       :ok = Engine.execution(command)
       c = Store.call({:get, s.turn["conversation_id"]})
       turn = s.turn
@@ -56,8 +58,9 @@ defmodule Managoat.Sprite.ConversationServer do
           mode: if(c["runtime_session_id"], do: :continue, else: :run),
           session_id: c["runtime_session_id"],
           cwd: config["workspace"],
-          permission_policy: c["permission_policy"],
-          model: Managoat.Runtimes.Model.acp_model(config["runtime"], config["model"])
+          permission_policy:
+            Managoat.ACP.Permissions.effective(config["permissions"], turn["permission_policy"]),
+          model: Managoat.Runtimes.Model.acp_model(config["runtime"], turn["requested_model"])
         )
 
       runtime.connect(command, peer)
@@ -74,6 +77,7 @@ defmodule Managoat.Sprite.ConversationServer do
            renew_at: System.monotonic_time(:millisecond)
        }}
     else
+      {:error, {409, reason}} -> finish(s, "failed", reason, nil)
       _ -> finish(s, "failed", "runtime_start_failed", nil)
     end
   end

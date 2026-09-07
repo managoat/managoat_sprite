@@ -32,7 +32,7 @@ Service:    managoat
 Agent:      default (claude)
 Workspace:  /home/sprite/project
 Local API:  http://127.0.0.1:8080/api
-API key:    saved to /home/sprite/.config/managoat/client.key
+API key:    saved to /home/sprite/.local/share/managoat/config/client.key
 
 Use `managoat status` to inspect service and agent readiness.
 Use `managoat key show` to retrieve the API key.
@@ -126,26 +126,30 @@ The engine persists semantic events and publishes notifications after commit. It
 
 ## Configuration and disk layout
 
-Proposed config file: `/home/sprite/.config/managoat/config.json`.
+Configuration file: `/home/sprite/.local/share/managoat/config/config.json`.
+The implementation keeps private configuration under the application root and
+uses a flat schema:
 
 ```json
 {
-  "listen": {"host": "0.0.0.0", "port": 8080},
-  "agent": {
-    "id": "default",
-    "name": "Workspace agent",
-    "runtime": "claude",
-    "model": null,
-    "workspace": "/home/sprite/project",
-    "instructions_file": "/home/sprite/.config/managoat/instructions.md",
-    "permissions": {"default": "auto_allow"}
-  },
+  "host": "0.0.0.0",
+  "port": 8080,
+  "name": "Workspace agent",
+  "runtime": "claude",
+  "model": null,
+  "workspace": "/home/sprite/project",
+  "permissions": {"default": "auto_allow"},
   "cors_origins": [],
   "permission_timeout_seconds": 300,
   "turn_timeout_seconds": 3600,
   "max_request_bytes": 1048576
 }
 ```
+
+The logical agent ID is always `default`. Custom system instructions live at
+`config/instructions.md` beneath the application root. Immutable snapshots
+record runtime, workspace and the instruction digest; each turn records its
+requested model and effective permissions.
 
 `model: null` delegates to the runtime default; explicit selections go through `Managoat.Runtimes.Model`. Configuration is validated strictly. `managoat configure --file PATH` validates and stages changes, applies them only while idle, and restarts the service. Runtime, workspace and system-instruction changes are refused while retained conversations depend on the previous configuration; v0.1 does not quietly resume old sessions under a new agent definition. Model selection and stricter permission policies may change between turns and are recorded on each turn.
 
@@ -156,7 +160,7 @@ The default permission policy enables unattended operation for a trusted operato
 | `.local/share/managoat/releases/<version>/` | Immutable application releases |
 | `.local/share/managoat/current` | Active release pointer |
 | `.local/bin/managoat` | Stable management launcher |
-| `.config/managoat/` | Config, instructions, selected credentials, optional client key |
+| `.local/share/managoat/config/` | Config, instructions, selected credentials, optional client key |
 | `.local/share/managoat/state/` | SQLite database, WAL, schema version, installation identity |
 | `.local/share/managoat/runtime/` | Application-owned executables and installation manifest |
 | `project/` or configured workspace | Operator files; never treated as disposable application state |
