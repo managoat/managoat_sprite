@@ -1,0 +1,154 @@
+defmodule Managoat.Sprite.Runtime do
+  @moduledoc "Managoat runtime provisioning in an installation-owned home."
+  alias Managoat.Sprite.{Config, Execution}
+  alias Managoat.Runtimes
+  def home, do: Path.join(Config.root(), "runtime/home")
+  def prefix, do: Path.join(Config.root(), "runtime/npm")
+
+  def env do
+    credentials =
+      case File.read(Path.join(Config.root(), "config/credentials.json")) do
+        {:ok, bytes} -> Jason.decode!(bytes)
+        _ -> %{}
+      end
+
+    system_path =
+      System.get_env("MANAGOAT_SYSTEM_PATH") || System.get_env("PATH") ||
+        "/usr/local/bin:/usr/bin:/bin"
+
+    base = %{
+      "HOME" => home(),
+      "PATH" =>
+        Path.join(home(), ".local/bin") <> ":" <> Path.join(prefix(), "bin") <> ":" <> system_path,
+      "npm_config_prefix" => prefix(),
+      "LANG" => "C.UTF-8",
+      "CODEX_HOME" => Path.join(home(), ".codex"),
+      "CLAUDE_CONFIG_DIR" => Path.join(home(), ".claude")
+    }
+
+    Map.merge(base, credentials) |> Map.to_list()
+  end
+
+  def resolve(cmd) do
+    if Path.type(cmd) == :absolute do
+      cmd
+    else
+      paths = env() |> Map.new() |> Map.fetch!("PATH") |> String.split(":")
+
+      Enum.find_value(paths, cmd, fn path ->
+        candidate = Path.join(path, cmd)
+        if File.regular?(candidate), do: candidate
+      end)
+    end
+  end
+
+  def install do
+    c = Config.get()
+    File.mkdir_p!(home())
+    File.mkdir_p!(c["workspace"])
+    runtime = c["runtime"]
+    {:ok, mod} = Runtimes.for_runtime(runtime)
+    h = Managoat.Sprite.Sandbox.Local.build_handle("installation")
+    agent = %{name: c["name"], model: c["model"], system: instructions(), mcp_servers: %{}}
+
+    with :ok <- install_cli(h, runtime),
+         :ok <- Runtimes.ACP.install(h, runtime, env()),
+         :ok <- Runtimes.Instructions.write(h, runtime, agent),
+         :ok <- Runtimes.write_config(mod, h, agent),
+         :ok <- Runtimes.prepare_sandbox(mod, h, agent, env()) do
+      :ok
+    end
+  end
+
+  defp install_cli(h, runtime) do
+    package =
+      %{"codex" => "@openai/codex@0.153.4", "claude" => "@anthropic-ai/claude-code@2.1.263"}[
+        runtime
+      ]
+
+    case Managoat.Sandbox.exec(h, "npm", ["install", "-g", "--no-progress", package],
+           env: env(),
+           timeout: 180_000
+         ) do
+      {:ok, _, 0} -> :ok
+      _ -> {:error, :cli_install_failed}
+    end
+  end
+
+  def probe do
+    with {:ok, pid} <- start(self()) do
+      try do
+        params = Managoat.Runtimes.ACP.initialize_params()
+
+        :ok =
+          write(
+            pid,
+            Jason.encode!(%{jsonrpc: "2.0", id: 1, method: "initialize", params: params}) <> "\n"
+          )
+
+        probe_reply(pid, "", System.monotonic_time(:millisecond) + 30_000)
+      after
+        stop(pid)
+      end
+    end
+  end
+
+  defp probe_reply(pid, buffer, deadline) do
+    receive do
+      {:stdout, %{ref: ^pid}, bytes} ->
+        parts = String.split(buffer <> bytes, "\n")
+        frames = Enum.drop(parts, -1)
+
+        if Enum.any?(frames, fn frame ->
+             case Jason.decode(frame) do
+               {:ok, %{"id" => 1, "result" => %{"protocolVersion" => 1}}} -> true
+               _ -> false
+             end
+           end), do: :ok, else: probe_reply(pid, List.last(parts), deadline)
+
+      {:stderr, %{ref: ^pid}, _} ->
+        probe_reply(pid, buffer, deadline)
+
+      {kind, %{ref: ^pid}, _} when kind in [:exit, :error] ->
+        {:error, :agent_exited}
+    after
+      max(0, deadline - System.monotonic_time(:millisecond)) -> {:error, :initialization_timeout}
+    end
+  end
+
+  def reconcile do
+    Enum.reduce_while(:exec.which_children(), :ok, fn {pid, _}, _ ->
+      ref = Process.monitor(pid)
+      :exec.stop(pid)
+
+      receive do
+        {:DOWN, ^ref, :process, ^pid, _} -> {:cont, :ok}
+      after
+        10_000 ->
+          Process.demonitor(ref, [:flush])
+          {:halt, {:error, :cleanup_unavailable}}
+      end
+    end)
+  end
+
+  def instructions do
+    case File.read(Path.join(Config.root(), "config/instructions.md")) do
+      {:ok, s} -> s
+      _ -> "You are the workspace agent. Work in the configured project directory."
+    end
+  end
+
+  def start(owner) do
+    {cmd, args} = Runtimes.ACP.command(Config.get()["runtime"])
+    Execution.start(resolve(cmd), args, owner: owner, env: env(), dir: Config.get()["workspace"])
+  end
+
+  def write(pid, data), do: Execution.write(pid, data)
+  def connect(_, _), do: :ok
+  def stop(pid), do: Execution.stop(pid)
+
+  def ready? do
+    {cmd, _} = Runtimes.ACP.command(Config.get()["runtime"])
+    File.regular?(resolve(cmd))
+  end
+end
