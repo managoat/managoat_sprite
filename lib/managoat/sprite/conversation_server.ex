@@ -15,6 +15,7 @@ defmodule Managoat.Sprite.ConversationServer do
        hold: "managoat-" <> Store.call(:identity) <> "-" <> turn["id"],
        renew_at: nil,
        bytes: 0,
+       wire_bytes: 0,
        cancelled: false,
        failure: nil
      }, {:continue, :start}}
@@ -33,8 +34,10 @@ defmodule Managoat.Sprite.ConversationServer do
         bytes = IO.iodata_to_binary(data)
 
         case Jason.decode(bytes) do
-          {:ok, %{"method" => "session/prompt", "id" => rid}} ->
-            with :ok <- Store.call({:dispatch, turn["id"], rid}), do: runtime.write(command, data)
+          {:ok, %{"method" => "session/prompt", "id" => rid, "params" => %{"sessionId" => sid}}} ->
+            with :ok <- Store.call({:session, turn["conversation_id"], sid}),
+                 :ok <- Store.call({:dispatch, turn["id"], rid}),
+                 do: runtime.write(command, data)
 
           _ ->
             runtime.write(command, data)
@@ -77,8 +80,14 @@ defmodule Managoat.Sprite.ConversationServer do
 
   @impl true
   def handle_info({:stdout, %{ref: command}, data}, %{command: command} = s) do
-    Peer.stdout(s.peer, data)
-    {:noreply, s}
+    bytes = s.wire_bytes + byte_size(data)
+
+    if bytes > Config.get()["max_output_bytes"] do
+      finish(s, "failed", "output_budget_exceeded", nil)
+    else
+      Peer.stdout(s.peer, data)
+      {:noreply, %{s | wire_bytes: bytes}}
+    end
   end
 
   def handle_info({:stderr, %{ref: command}, data}, %{command: command} = s),
@@ -177,6 +186,12 @@ defmodule Managoat.Sprite.ConversationServer do
     finish(s, status, if(status == "completed", do: nil, else: reason), usage)
   end
 
+  defp report({:failed, {:acp_error, tag, _}}, s) when tag in [:resume_session, :load_session],
+    do: finish(s, "failed", "session_unavailable", nil)
+
+  defp report({:failed, :acp_agent_cannot_resume}, s),
+    do: finish(s, "failed", "session_unavailable", nil)
+
   defp report({:failed, _}, s), do: finish(s, "failed", "acp_failed", nil)
   defp report(_, s), do: {:noreply, s}
 
@@ -202,5 +217,11 @@ defmodule Managoat.Sprite.ConversationServer do
     else
       {:stop, :cleanup_failed, s}
     end
+  end
+
+  @impl true
+  def format_status(status) do
+    # OTP crash reports are operational logs, never a copy of a prompt or key.
+    Map.merge(status, %{state: :redacted, message: :redacted, reason: :redacted})
   end
 end

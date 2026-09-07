@@ -1,0 +1,630 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Managoat Sprite conversations API",
+    "version": "0.1.0",
+    "description": "Fountain conversations v1 subset. One trusted workspace, one active turn; bearer owner authority."
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "paths": {
+    "/api/agents": {
+      "get": {
+        "summary": "List configured agent",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Missing or invalid bearer key"
+          },
+          "404": {
+            "description": "Unknown resource"
+          },
+          "422": {
+            "description": "Invalid or unsupported request"
+          }
+        }
+      }
+    },
+    "/api/agents/default": {
+      "get": {
+        "summary": "Get configured agent",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Missing or invalid bearer key"
+          },
+          "404": {
+            "description": "Unknown resource"
+          },
+          "422": {
+            "description": "Invalid or unsupported request"
+          }
+        }
+      }
+    },
+    "/api/capabilities": {
+      "get": {
+        "summary": "Describe supported features",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Missing or invalid bearer key"
+          },
+          "404": {
+            "description": "Unknown resource"
+          },
+          "422": {
+            "description": "Invalid or unsupported request"
+          }
+        }
+      }
+    },
+    "/api/conversations": {
+      "get": {
+        "summary": "List conversations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Missing or invalid bearer key"
+          },
+          "404": {
+            "description": "Unknown resource"
+          },
+          "422": {
+            "description": "Invalid or unsupported request"
+          }
+        }
+      },
+      "post": {
+        "summary": "Start a conversation",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            },
+            "description": "Same key and body return the original admission response; changed body conflicts."
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Missing or invalid bearer key"
+          },
+          "404": {
+            "description": "Unknown resource"
+          },
+          "422": {
+            "description": "Invalid or unsupported request"
+          },
+          "201": {
+            "description": "Conversation durably created"
+          },
+          "409": {
+            "description": "Capacity or idempotency conflict"
+          },
+          "503": {
+            "description": "Service recovering, storage unavailable, or cleanup pending"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "prompt"
+                ],
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "agent_id": {
+                    "type": "string",
+                    "enum": [
+                      "default"
+                    ]
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "permission_policy": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string",
+                      "enum": [
+                        "auto_allow",
+                        "ask",
+                        "auto_deny"
+                      ]
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/conversations/{id}": {
+      "get": {
+        "summary": "Read a conversation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Missing or invalid bearer key"
+          },
+          "404": {
+            "description": "Unknown resource"
+          },
+          "422": {
+            "description": "Invalid or unsupported request"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete API history while preserving workspace",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed"
+          },
+          "401": {
+            "description": "Missing or invalid bearer key"
+          },
+          "404": {
+            "description": "Unknown resource"
+          },
+          "409": {
+            "description": "Conflicting state"
+          }
+        }
+      }
+    },
+    "/api/conversations/{id}/prompts": {
+      "post": {
+        "summary": "Submit a follow-up",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            },
+            "description": "Same key and body return the original admission response; changed body conflicts."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Missing or invalid bearer key"
+          },
+          "404": {
+            "description": "Unknown resource"
+          },
+          "422": {
+            "description": "Invalid or unsupported request"
+          },
+          "409": {
+            "description": "Capacity or idempotency conflict"
+          },
+          "503": {
+            "description": "Service recovering, storage unavailable, or cleanup pending"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "prompt"
+                ],
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/conversations/{id}/turns": {
+      "get": {
+        "summary": "List turns",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Missing or invalid bearer key"
+          },
+          "404": {
+            "description": "Unknown resource"
+          },
+          "422": {
+            "description": "Invalid or unsupported request"
+          }
+        }
+      }
+    },
+    "/api/conversations/{id}/events": {
+      "get": {
+        "summary": "Page durable events",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "streams",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated acp,stdout,stderr,stage filters"
+          },
+          {
+            "name": "blocks",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 1000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Missing or invalid bearer key"
+          },
+          "404": {
+            "description": "Unknown resource"
+          },
+          "422": {
+            "description": "Invalid or unsupported request"
+          }
+        }
+      }
+    },
+    "/api/conversations/{id}/stream": {
+      "get": {
+        "summary": "Replay and follow conversation events",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "streams",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated acp,stdout,stderr,stage filters"
+          },
+          {
+            "name": "blocks",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "wait",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer key"
+          },
+          "404": {
+            "description": "Unknown resource"
+          },
+          "422": {
+            "description": "Invalid or unsupported request"
+          }
+        }
+      }
+    },
+    "/api/events/stream": {
+      "get": {
+        "summary": "Replay and follow all conversations",
+        "parameters": [
+          {
+            "name": "streams",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated acp,stdout,stderr,stage filters"
+          },
+          {
+            "name": "blocks",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "wait",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer key"
+          },
+          "404": {
+            "description": "Unknown resource"
+          },
+          "422": {
+            "description": "Invalid or unsupported request"
+          }
+        }
+      }
+    },
+    "/api/conversations/{id}/interrupt": {
+      "post": {
+        "summary": "Cancel current turn",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed"
+          },
+          "401": {
+            "description": "Missing or invalid bearer key"
+          },
+          "404": {
+            "description": "Unknown resource"
+          },
+          "409": {
+            "description": "Conflicting state"
+          }
+        }
+      }
+    },
+    "/api/conversations/{id}/terminate": {
+      "post": {
+        "summary": "Permanently close conversation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed"
+          },
+          "401": {
+            "description": "Missing or invalid bearer key"
+          },
+          "404": {
+            "description": "Unknown resource"
+          },
+          "409": {
+            "description": "Conflicting state"
+          }
+        }
+      }
+    },
+    "/api/conversations/{id}/requests/{request_id}": {
+      "post": {
+        "summary": "Answer a permission request",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Missing or invalid bearer key"
+          },
+          "404": {
+            "description": "Unknown resource"
+          },
+          "422": {
+            "description": "Invalid or unsupported request"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "option_id"
+                ],
+                "properties": {
+                  "option_id": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

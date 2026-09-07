@@ -7,10 +7,12 @@ export MANAGOAT_ROOT
 version=0.1.0
 explicit_version=false
 download_only=false
+stage_only=false
 previous=
 for arg in "$@"; do
   if [ "$previous" = --version ]; then version=$arg; explicit_version=true; fi
   if [ "$arg" = --download-only ]; then download_only=true; fi
+  if [ "$arg" = --stage-only ]; then stage_only=true; download_only=true; fi
   previous=$arg
 done
 case "$version" in *[!0-9A-Za-z.-]*|'') echo 'Invalid release version' >&2; exit 1;; esac
@@ -62,13 +64,14 @@ installed_version=$(cat "$stage/release/VERSION")
 if [ ! -d "$MANAGOAT_ROOT/releases/$version" ]; then
   mv "$stage/release" "$MANAGOAT_ROOT/releases/$version"
 fi
+if [ "$stage_only" = true ]; then exit 0; fi
 ln -s "$MANAGOAT_ROOT/releases/$version" "$stage/current"
 mv -Tf "$stage/current" "$MANAGOAT_ROOT/current"
 python3 - "$MANAGOAT_ROOT" <<'PY'
 from pathlib import Path
 import shlex, sys
 root = Path(sys.argv[1])
-service = '#!/bin/sh\nset -eu\nexport MANAGOAT_ROOT=' + shlex.quote(str(root)) + '\nexport RELEASE_NODE=managoat\nexport SHELL=/bin/sh\nexec flock -n ' + shlex.quote(str(root/'state/instance.lock')) + ' ' + shlex.quote(str(root/'current/bin/managoat')) + ' start\n'
+service = '#!/bin/sh\nset -eu\nexport MANAGOAT_ROOT=' + shlex.quote(str(root)) + '\nexec python3 ' + shlex.quote(str(root/'current/service.py')) + '\n'
 (root/'service').write_text(service)
 (root/'service').chmod(0o700)
 launcher = Path.home()/'.local/bin/managoat'

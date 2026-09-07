@@ -52,6 +52,8 @@ defmodule Managoat.Sprite.HTTPTest do
     assert request(:post, "/api/conversations", %{prompt: "hi", images: []}).status == 422
     assert request(:post, "/api/conversations", %{prompt: "hi", agent_id: "other"}).status == 404
     assert request(:post, "/api/conversations", %{prompt: " "}).status == 422
+    assert request(:get, "/api/conversations?status[]=running").status == 422
+    assert request(:get, "/api/events/stream?streams[]=acp").status == 422
 
     assert request(:get, "/api/events/stream?wait=false", nil, [{"last-event-id", "bad"}]).status ==
              422

@@ -85,7 +85,7 @@ defmodule Managoat.Sprite.TestCase do
   end
 
   def decode(conn), do: Jason.decode!(conn.resp_body)
-  def eventually(fun, attempts \\ 300)
+  def eventually(fun, attempts \\ 100)
   def eventually(fun, 0), do: fun.()
 
   def eventually(fun, n) do

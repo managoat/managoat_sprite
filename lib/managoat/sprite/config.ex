@@ -40,6 +40,20 @@ defmodule Managoat.Sprite.Config do
 
     c = Map.merge(defaults, c)
 
+    if c["model"] do
+      provider = Managoat.Runtimes.Model.provider(c["model"])
+
+      unless provider == Managoat.Runtimes.Model.provider_for_runtime(c["runtime"]),
+        do: raise(ArgumentError, "model must name the runtime's provider, e.g. openai/model-id")
+    end
+
+    unless is_binary(c["host"]) and
+             match?({:ok, _}, :inet.parse_address(String.to_charlist(c["host"]))),
+           do: raise(ArgumentError, "host must be an IP address")
+
+    unless is_binary(c["name"]) and byte_size(c["name"]) > 0,
+      do: raise(ArgumentError, "name must be nonempty")
+
     for key <-
           ~w(port permission_timeout_seconds turn_timeout_seconds max_request_bytes max_output_bytes) do
       unless is_integer(c[key]) and c[key] > 0,

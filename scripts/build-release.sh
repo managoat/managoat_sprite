@@ -6,8 +6,10 @@ mix compile --warnings-as-errors
 mix release managoat --overwrite
 release=_build/prod/rel/managoat
 cp scripts/managoat.py "$release/managoat.py"
+cp scripts/service.py "$release/service.py"
 version=$(awk '{print $2}' "$release/releases/start_erl.data")
 printf '%s\n' "$version" > "$release/VERSION"
+printf '%s\n' '{"schema":1,"reads_schemas":[1],"rollback_schemas":[1]}' > "$release/manifest.json"
 case "$(uname -m)" in x86_64) arch=amd64;; aarch64) arch=arm64;; *) exit 1;; esac
 mkdir -p dist
 archive="managoat-linux-$arch.tar.gz"

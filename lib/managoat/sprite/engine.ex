@@ -1,7 +1,7 @@
 defmodule Managoat.Sprite.Engine do
   @moduledoc "One admission slot, durable recovery, and ownership independent of HTTP clients."
   use GenServer
-  alias Managoat.Sprite.{Store, Config, ConversationServer}
+  alias Managoat.Sprite.{Store, Config, ConversationServer, Lifecycle}
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   def admit(id, attrs, key), do: GenServer.call(__MODULE__, {:admit, id, attrs, key}, 30_000)
   def interrupt(id), do: GenServer.call(__MODULE__, {:interrupt, id})
@@ -23,9 +23,12 @@ defmodule Managoat.Sprite.Engine do
   @impl true
   def handle_info(:recover, s) do
     if Process.whereis(Managoat.Sprite.Workers) do
-      case runtime().reconcile() do
-        :ok -> recover(s)
-        _ -> {:noreply, %{s | ready: false}}
+      with :ok <- runtime().reconcile(), :ok <- Lifecycle.reconcile(Store.call(:identity)) do
+        recover(s)
+      else
+        _ ->
+          Process.send_after(self(), :recover, 5_000)
+          {:noreply, %{s | ready: false}}
       end
     else
       Process.send_after(self(), :recover, 10)
@@ -38,8 +41,10 @@ defmodule Managoat.Sprite.Engine do
     clean = result in [:ok, {:error, :command_exited}]
 
     if clean do
-      if turn = Store.call(:active),
-        do: Store.call({:finish, turn["id"], "interrupted", "execution_outcome_unknown", nil})
+      if turn = Store.call(:active) do
+        Store.call({:finish, turn["id"], "interrupted", "execution_outcome_unknown", nil})
+        Lifecycle.release("managoat-" <> Store.call(:identity) <> "-" <> turn["id"])
+      end
     end
 
     if s.closing do
@@ -60,14 +65,22 @@ defmodule Managoat.Sprite.Engine do
   def handle_call(:ready, _, s), do: {:reply, s.ready, s}
   def handle_call({:execution, pid}, _, s), do: {:reply, :ok, %{s | execution: pid}}
 
-  def handle_call({:admit, _, _, _}, _, %{ready: false} = s),
-    do: {:reply, {:error, {503, "recovering"}}, s}
-
   def handle_call({:admit, id, attrs, key}, _, s) do
-    if s.worker && is_nil(Store.call(:active)) do
-      {:reply, {:error, {503, "cleanup_pending"}}, s}
-    else
-      admit_ready(id, attrs, key, s)
+    case Store.call({:replay, id, attrs, key}) do
+      :missing ->
+        cond do
+          not s.ready ->
+            {:reply, {:error, {503, "recovering"}}, s}
+
+          s.worker && is_nil(Store.call(:active)) ->
+            {:reply, {:error, {503, "cleanup_pending"}}, s}
+
+          true ->
+            admit_ready(id, attrs, key, s)
+        end
+
+      result ->
+        {:reply, result, s}
     end
   end
 
@@ -96,11 +109,19 @@ defmodule Managoat.Sprite.Engine do
   end
 
   def handle_call({:close, id, delete?}, from, s) do
-    if active?(id, s) do
-      send(s.worker, :interrupt)
-      {:noreply, %{s | closing: {from, id, delete?}}}
-    else
-      {:reply, Store.call({if(delete?, do: :delete, else: :terminate), id}), s}
+    cond do
+      s.closing != nil ->
+        {:reply, {:error, {409, "cleanup_pending"}}, s}
+
+      active?(id, s) ->
+        send(s.worker, :interrupt)
+        {:noreply, %{s | closing: {from, id, delete?}}}
+
+      s.worker != nil and is_nil(Store.call(:active)) ->
+        {:reply, {:error, {503, "cleanup_pending"}}, s}
+
+      true ->
+        {:reply, Store.call({if(delete?, do: :delete, else: :terminate), id}), s}
     end
   end
 
@@ -165,5 +186,11 @@ defmodule Managoat.Sprite.Engine do
           false
       end
     end
+  end
+
+  @impl true
+  def format_status(status) do
+    # OTP crash reports are operational logs, never a copy of a prompt or key.
+    Map.merge(status, %{state: :redacted, message: :redacted, reason: :redacted})
   end
 end

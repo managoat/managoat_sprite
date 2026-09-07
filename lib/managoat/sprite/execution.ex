@@ -93,4 +93,9 @@ defmodule Managoat.Sprite.Execution do
     do: handle_info({:DOWN, s.os_pid, :process, pid, reason}, s)
 
   def handle_info({:EXIT, _, _}, s), do: {:noreply, s}
+  @impl true
+  def format_status(status) do
+    # OTP crash reports are operational logs, never a copy of a prompt or key.
+    Map.merge(status, %{state: :redacted, message: :redacted, reason: :redacted})
+  end
 end

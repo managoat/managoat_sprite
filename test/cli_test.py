@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import sqlite3
 import unittest
 from unittest.mock import patch
 
@@ -94,6 +95,92 @@ class InstallerTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'in progress'):
                 with cli.operation_lock():
                     self.fail('second operation acquired lock')
+
+    def test_backup_restore_preserves_history_and_workspace_but_rotates_credentials(self):
+        self.install()
+        database = cli.ROOT / 'state/managoat.sqlite3'
+        with contextlib.closing(sqlite3.connect(database)) as db:
+            db.executescript('CREATE TABLE turns (active INTEGER, prompt TEXT);'
+                'CREATE TABLE api_keys (digest TEXT);'
+                "INSERT INTO turns VALUES(0, 'retained history');"
+                "INSERT INTO api_keys VALUES('old-key-digest');")
+            db.commit()
+        workspace = Path(self.args.workspace)
+        (workspace/'keep.txt').write_text('project contents')
+        home = cli.ROOT/'runtime/home'
+        home.mkdir(parents=True)
+        (home/'session.json').write_text('retained runtime session')
+        (home/'auth.json').write_text('private provider login')
+        target = self.root/'backup.tar.gz'
+        with patch.object(cli, 'offline', contextlib.nullcontext), contextlib.redirect_stdout(io.StringIO()):
+            cli.backup(argparse.Namespace(output=str(target), workspace=True))
+        new_root = self.root/'restored'
+        new_root.mkdir()
+        cli.ROOT, cli.CONFIG = new_root, new_root/'config/config.json'
+        (new_root/'state').mkdir()  # Bootstrap has already created this directory.
+        with contextlib.redirect_stdout(io.StringIO()):
+            cli.restore(argparse.Namespace(input=str(target), credential_file=str(self.key),
+                workspace=str(new_root/'project'), no_http_route=True))
+        with contextlib.closing(sqlite3.connect(new_root/'state/managoat.sqlite3')) as db:
+            self.assertEqual(db.execute('SELECT prompt FROM turns').fetchone()[0], 'retained history')
+            self.assertEqual(db.execute('SELECT count(*) FROM api_keys').fetchone()[0], 0)
+        self.assertEqual((new_root/'project/keep.txt').read_text(), 'project contents')
+        self.assertEqual((new_root/'runtime/home/session.json').read_text(), 'retained runtime session')
+        self.assertFalse((new_root/'runtime/home/auth.json').exists())
+        self.assertNotEqual((new_root/'config/client.key').read_text().strip(), os.environ['MANAGOAT_API_KEY'])
+
+    def prepare_upgrade(self):
+        self.install()
+        previous = self.root/'releases/0.1.0'
+        previous.parent.mkdir()
+        cli.CURRENT.rename(previous)
+        cli.CURRENT.symlink_to(previous)
+        manifest = {'schema': 1, 'reads_schemas': [1], 'rollback_schemas': [1]}
+        (previous/'manifest.json').write_text(json.dumps(manifest))
+        candidate = self.root/'releases/0.1.1'
+        candidate.mkdir()
+        (candidate/'manifest.json').write_text(json.dumps(manifest))
+        database = self.root/'state/managoat.sqlite3'
+        with contextlib.closing(sqlite3.connect(database)) as db:
+            db.executescript('CREATE TABLE turns (active INTEGER); CREATE TABLE history(value TEXT);'
+                "INSERT INTO history VALUES('before upgrade');")
+        self.service.reset_mock()
+        return previous.resolve(), database
+
+    def test_failed_download_leaves_running_release_untouched(self):
+        previous, _ = self.prepare_upgrade()
+        with patch.object(cli.urllib.request, 'urlopen', side_effect=OSError('download failed')):
+            with self.assertRaisesRegex(OSError, 'download failed'):
+                cli.upgrade(argparse.Namespace(version='0.1.1'))
+        self.assertEqual(cli.CURRENT.resolve(), previous)
+        self.service.assert_not_called()
+
+    def test_failed_migration_restores_previous_database_and_service(self):
+        previous, database = self.prepare_upgrade()
+        def migrate(*_):
+            with contextlib.closing(sqlite3.connect(database)) as db:
+                db.execute("UPDATE history SET value='candidate mutation'")
+                db.commit()
+            raise RuntimeError('migration failed')
+        self.release.side_effect = migrate
+        with patch.object(cli.urllib.request, 'urlopen', return_value=io.BytesIO(b'# installer')), \
+                patch.object(cli, 'run'), patch.object(cli, 'ensure_idle'):
+            with self.assertRaisesRegex(RuntimeError, 'migration failed'):
+                cli.upgrade(argparse.Namespace(version='0.1.1'))
+        self.assertEqual(cli.CURRENT.resolve(), previous)
+        with contextlib.closing(sqlite3.connect(database)) as db:
+            self.assertEqual(db.execute('SELECT value FROM history').fetchone()[0], 'before upgrade')
+        self.service.assert_any_call('start', 'managoat')
+
+    def test_failed_candidate_health_check_restores_previous_release(self):
+        previous, _ = self.prepare_upgrade()
+        with patch.object(cli.urllib.request, 'urlopen', return_value=io.BytesIO(b'# installer')), \
+                patch.object(cli, 'run'), patch.object(cli, 'ensure_idle'), \
+                patch.object(cli, 'wait_ready', side_effect=[RuntimeError('health failed'), None]):
+            with self.assertRaisesRegex(RuntimeError, 'health failed'):
+                cli.upgrade(argparse.Namespace(version='0.1.1'))
+        self.assertEqual(cli.CURRENT.resolve(), previous)
+        self.assertTrue(list((self.root/'state/upgrade-backups').glob('*.sqlite3')))
 
 
 if __name__ == '__main__':

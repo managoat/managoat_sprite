@@ -10,7 +10,10 @@ Built with [Managoat.ACP](https://github.com/managoat/managoat_acp),
 
 ## Installation
 
-The initial release is under verification. Once its release assets are published,
+The Codex path has passed installation and real inference checks on a clean
+Sprite, including the existing chat template's HTTP/SSE client. Public release
+assets are not published yet, and Claude qualification remains pending. Once
+release assets are published,
 run inside your Sprite with an inference key already exported:
 
 ```sh
@@ -90,6 +93,7 @@ managoat start | stop | restart
 managoat key show | rotate
 managoat configure --file config.json
 managoat backup --output backup.tar.gz [--workspace]
+managoat restore --input backup.tar.gz --credential-file /path/to/key [--workspace PATH]
 managoat upgrade --version VERSION
 managoat uninstall
 ```
@@ -97,6 +101,16 @@ managoat uninstall
 `doctor --inference` makes a small paid model request. A normal readiness check
 only establishes local agent initialization. Backups omit application and
 inference credentials by default. Uninstall preserves state and the workspace.
+Restore requires empty application state and supplies a new application key.
+Backup archives remain sensitive because transcripts and workspace files can
+contain private content. Idempotency deletion tombstones are retained indefinitely
+in this version; events are not automatically pruned.
+
+The service uses a small Linux supervisor to restart the BEAM after crashes and
+reap orphaned tools before accepting more work. Upgrades stage and validate an
+archive before stopping the API, save a consistent database backup, and restore
+the previous release and database if migration or readiness fails. Automatic
+upgrades currently support schema 1 only.
 
 ## Development
 
@@ -109,6 +123,17 @@ python3 -m unittest discover -s test -p '*_test.py' -v
 Linux release: `sh scripts/build-release.sh`. The release workflow builds
 AMD64 and ARM64 archives on Ubuntu 24.04. The local test suite exercises a real
 ACP peer against the libraries' ScriptedAgent and executes real subprocesses.
+
+To test an installation using the existing chat template client (paid inference):
+
+```sh
+FOUNTAIN_CLIENT_ROOT=/path/to/fountain-template-chat \
+MANAGOAT_BASE_URL=http://localhost:8080 \
+MANAGOAT_KEY_FILE=/path/to/client.key \
+bun scripts/check-client.ts
+```
+
+This check expects `http://localhost:5173` in the installation's `cors_origins`.
 
 [The specification](docs/spec.md) defines the full release target; integration
 verification is recorded in [the acceptance record](docs/acceptance.md).

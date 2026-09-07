@@ -8,9 +8,8 @@ defmodule Managoat.Sprite.Release do
     c = Config.load!()
     Application.put_env(:managoat_sprite, :config, c)
     hold = "managoat-install"
-    :ok = Lifecycle.acquire(hold)
 
-    try do
+    Lifecycle.with_hold(hold, fn ->
       with :ok <- Runtime.install(), :ok <- Runtime.probe() do
         {:ok, _} = Repo.start_link(database: Path.join(Config.root(), "state/managoat.sqlite3"))
         {:ok, _} = Store.start_link([])
@@ -28,13 +27,12 @@ defmodule Managoat.Sprite.Release do
           IO.puts(:stderr, "runtime setup or ACP initialization failed; run managoat doctor")
           System.halt(1)
       end
-    after
-      Lifecycle.release(hold)
-    end
+    end)
   end
 
   def rotate_key do
     key = "mgt_" <> Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
+    :ok = Store.call({:key, key})
     Config.private_write!(Path.join(Config.root(), "config/client.key"), key <> "\n")
     :ok = Store.call({:rotate_key, key})
     :ok

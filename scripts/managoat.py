@@ -5,6 +5,7 @@ import contextlib
 import fcntl
 import json
 import os
+import re
 from pathlib import Path
 import secrets
 import shutil
@@ -249,9 +250,9 @@ def configure(args):
 
 
 def upgrade(args):
-    if not args.version:
-        raise RuntimeError('upgrade requires --version')
-    with operation_lock(), offline():
+    if not re.fullmatch(r'[0-9][0-9A-Za-z.-]*', args.version or ''):
+        raise RuntimeError('upgrade requires a valid --version')
+    with operation_lock():
         previous = CURRENT.resolve()
         source = f'https://raw.githubusercontent.com/managoat/managoat_sprite/v{args.version}/install.sh'
         with urllib.request.urlopen(source, timeout=30) as response:
@@ -259,14 +260,86 @@ def upgrade(args):
         with tempfile.NamedTemporaryFile() as handle:
             handle.write(script)
             handle.flush()
+            run(['sh', handle.name, '--version', args.version, '--stage-only'])
+        candidate = ROOT / 'releases' / args.version
+        manifest = json.loads((candidate / 'manifest.json').read_text())
+        old_manifest = json.loads((previous / 'manifest.json').read_text())
+        if (manifest.get('schema') != 1 or old_manifest.get('schema') != 1 or
+                1 not in manifest.get('reads_schemas', []) or
+                1 not in old_manifest.get('rollback_schemas', [])):
+            raise RuntimeError('incompatible migration; automatic upgrade supports schema 1 only')
+        with offline():
+            backups = ROOT / 'state/upgrade-backups'
+            backups.mkdir(mode=0o700, exist_ok=True)
+            saved = backups / f'{time.time_ns()}.sqlite3'
+            source_db = sqlite3.connect(ROOT / 'state/managoat.sqlite3')
+            backup_db = sqlite3.connect(saved)
             try:
-                run(['sh', handle.name, '--version', args.version, '--download-only'])
+                source_db.backup(backup_db)
+            finally:
+                source_db.close()
+                backup_db.close()
+            saved.chmod(0o600)
+            def activate(path):
+                link = ROOT / f'.current-{secrets.token_hex(8)}'
+                link.symlink_to(path)
+                os.replace(link, CURRENT)
+            try:
+                activate(candidate)
                 release('eval', 'Managoat.Sprite.Release.install()')
+                service('start', 'managoat')
+                wait_ready()
             except Exception:
-                CURRENT.unlink()
-                CURRENT.symlink_to(previous)
+                service('stop', 'managoat')
+                activate(previous)
+                database = ROOT / 'state/managoat.sqlite3'
+                for suffix in ('-wal', '-shm'):
+                    Path(str(database) + suffix).unlink(missing_ok=True)
+                shutil.copy2(saved, database)
                 raise
     print(f'Upgraded to {args.version}')
+
+
+def restore(args):
+    if (ROOT / 'state/managoat.sqlite3').exists() or CONFIG.exists():
+        raise RuntimeError('restore requires an empty installation state and configuration')
+    credential = Path(args.credential_file).read_text().strip()
+    if not credential:
+        raise RuntimeError('restore requires an inference credential')
+    with operation_lock(), tempfile.TemporaryDirectory() as tmp:
+        stage = Path(tmp)
+        with tarfile.open(args.input) as archive:
+            archive.extractall(stage, filter='data')
+        manifest = json.loads((stage / 'manifest.json').read_text())
+        if manifest.get('schema') != 1:
+            raise RuntimeError('unsupported backup schema')
+        c = json.loads((stage / 'config.json').read_text())
+        if args.workspace:
+            c['workspace'] = str(Path(args.workspace).resolve())
+        workspace = Path(c['workspace'])
+        if (stage / 'workspace').exists() and workspace.exists() and any(workspace.iterdir()):
+            raise RuntimeError('restore will not overwrite an existing workspace')
+        check = sqlite3.connect(stage / 'managoat.sqlite3')
+        try:
+            if check.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
+                raise RuntimeError('backup database integrity check failed')
+            if check.execute('SELECT count(*) FROM turns WHERE active=1').fetchone()[0]:
+                raise RuntimeError('backup contains active work and cannot be restored automatically')
+        finally:
+            check.close()
+        (ROOT / 'state').mkdir(parents=True, exist_ok=True, mode=0o700)
+        shutil.copy2(stage / 'managoat.sqlite3', ROOT / 'state/managoat.sqlite3')
+        if (stage / 'runtime_home').exists():
+            shutil.copytree(stage / 'runtime_home', ROOT / 'runtime/home', symlinks=True, dirs_exist_ok=True)
+        if (stage / 'workspace').exists():
+            shutil.copytree(stage / 'workspace', workspace, symlinks=True, dirs_exist_ok=True)
+        name = 'OPENAI_API_KEY' if c['runtime'] == 'codex' else 'ANTHROPIC_API_KEY'
+        write_private(ROOT / 'config/credentials.json', json.dumps({name: credential}))
+        write_private(ROOT / 'config/client.key', 'mgt_' + secrets.token_urlsafe(32) + '\n')
+        write_private(CONFIG, json.dumps(c, indent=2))
+        install(argparse.Namespace(runtime=c['runtime'], workspace=c['workspace'],
+            credential_env=None, credential_file=None, port=c.get('port',8080),
+            model=c.get('model'), cors_origin=c.get('cors_origins',[]), no_http_route=args.no_http_route, json=True))
 
 
 def main():
@@ -295,6 +368,11 @@ def main():
     p = sub.add_parser('backup')
     p.add_argument('--output', required=True)
     p.add_argument('--workspace', action='store_true')
+    p = sub.add_parser('restore')
+    p.add_argument('--input', required=True)
+    p.add_argument('--credential-file', required=True)
+    p.add_argument('--workspace')
+    p.add_argument('--no-http-route', action='store_true')
     p = sub.add_parser('configure')
     p.add_argument('--file', required=True)
     p = sub.add_parser('upgrade')
@@ -327,11 +405,13 @@ def main():
             release('rpc', 'Managoat.Sprite.Release.rotate_key()')
             print('API key rotated; retrieve it with managoat key show')
     elif args.command == 'logs':
-        os.execvp('tail', ['tail', '-n', '100', '-f', '/.sprite/logs/services/managoat.log'])
+        os.execvp('tail', ['tail', '-n', '100', '-f', str(ROOT / 'logs/service.log')])
     elif args.command in ('restart', 'stop', 'start'):
         print(service(args.command, 'managoat').strip())
     elif args.command == 'backup':
         backup(args)
+    elif args.command == 'restore':
+        restore(args)
     elif args.command == 'configure':
         configure(args)
     elif args.command == 'upgrade':

@@ -11,18 +11,38 @@ defmodule Managoat.Sprite.Store do
 
   @impl true
   def init(_) do
-    Ecto.Migrator.run(Repo, :up, all: true, log: false)
+    Ecto.Migrator.run(
+      Repo,
+      [{20_260_907_000_000, Managoat.Sprite.Repo.Migrations.Initialize}],
+      :up,
+      all: true,
+      log: false
+    )
+
     query("INSERT OR IGNORE INTO installation(id,identity) VALUES(1,?)", [Config.id()])
-    {:ok, %{}}
+    {:ok, %{revision: System.unique_integer([:positive, :monotonic])}}
   end
 
   @impl true
+  def handle_call(:revision, _from, state), do: {:reply, state.revision, state}
+
   def handle_call(op, _from, state) do
     result = Repo.transaction(fn -> operate(op) end)
 
     case result do
-      {:ok, result} -> {:reply, result, state}
-      {:error, reason} -> {:reply, {:error, reason}, state}
+      {:ok, result} ->
+        changed =
+          is_tuple(op) and elem(op, 0) in [:admit, :finish, :delete, :terminate, :dispatch]
+
+        state =
+          if changed and not match?({:error, _}, result),
+            do: %{state | revision: System.unique_integer([:positive, :monotonic])},
+            else: state
+
+        {:reply, result, state}
+
+      {:error, reason} ->
+        {:reply, {:error, reason}, state}
     end
   end
 
@@ -94,6 +114,20 @@ defmodule Managoat.Sprite.Store do
       [[^fingerprint, response, 0]] -> {:ok, Jason.decode!(response), :replayed}
       [[_, _, _]] -> {:error, {409, "idempotency_conflict"}}
       _ -> admit(id, attrs, scoped, fingerprint)
+    end
+  end
+
+  defp operate({:replay, id, attrs, key}) do
+    operation = if id, do: "prompt:" <> id, else: "create"
+    fingerprint = digest(:erlang.term_to_binary(Enum.sort(attrs)))
+    scoped = if key, do: operation <> ":" <> key
+
+    case scoped &&
+           rows("SELECT fingerprint,response,deleted FROM idempotency WHERE key=?", [scoped]) do
+      [[_, _, 1]] -> {:error, {410, "gone"}}
+      [[^fingerprint, response, 0]] -> {:ok, Jason.decode!(response)}
+      [[_, _, _]] -> {:error, {409, "idempotency_conflict"}}
+      _ -> :missing
     end
   end
 
@@ -398,5 +432,11 @@ defmodule Managoat.Sprite.Store do
     ])
 
     :ok
+  end
+
+  @impl true
+  def format_status(status) do
+    # OTP crash reports are operational logs, never a copy of a prompt or key.
+    Map.merge(status, %{state: :redacted, message: :redacted, reason: :redacted})
   end
 end

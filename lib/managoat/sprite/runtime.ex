@@ -16,10 +16,17 @@ defmodule Managoat.Sprite.Runtime do
       System.get_env("MANAGOAT_SYSTEM_PATH") || System.get_env("PATH") ||
         "/usr/local/bin:/usr/bin:/bin"
 
+    node_bin =
+      case File.read(Path.join(Config.root(), "runtime/node-bin")) do
+        {:ok, path} -> String.trim(path) <> ":"
+        _ -> ""
+      end
+
     base = %{
       "HOME" => home(),
       "PATH" =>
-        Path.join(home(), ".local/bin") <> ":" <> Path.join(prefix(), "bin") <> ":" <> system_path,
+        Path.join(home(), ".local/bin") <>
+          ":" <> Path.join(prefix(), "bin") <> ":" <> node_bin <> system_path,
       "npm_config_prefix" => prefix(),
       "LANG" => "C.UTF-8",
       "CODEX_HOME" => Path.join(home(), ".codex"),
@@ -51,12 +58,32 @@ defmodule Managoat.Sprite.Runtime do
     h = Managoat.Sprite.Sandbox.Local.build_handle("installation")
     agent = %{name: c["name"], model: c["model"], system: instructions(), mcp_servers: %{}}
 
-    with :ok <- install_cli(h, runtime),
+    with :ok <- pin_node_path(),
+         :ok <- install_cli(h, runtime),
          :ok <- Runtimes.ACP.install(h, runtime, env()),
          :ok <- Runtimes.Instructions.write(h, runtime, agent),
          :ok <- Runtimes.write_config(mod, h, agent),
          :ok <- Runtimes.prepare_sandbox(mod, h, agent, env()) do
       :ok
+    end
+  end
+
+  defp pin_node_path do
+    case System.cmd("node", ["-p", "require('path').dirname(process.execPath)"],
+           stderr_to_stdout: true
+         ) do
+      {path, 0} ->
+        path = String.trim(path)
+
+        if Path.type(path) == :absolute and File.regular?(Path.join(path, "npm")) do
+          Config.private_write!(Path.join(Config.root(), "runtime/node-bin"), path <> "\n")
+          :ok
+        else
+          {:error, :node_toolchain_unavailable}
+        end
+
+      _ ->
+        {:error, :node_toolchain_unavailable}
     end
   end
 

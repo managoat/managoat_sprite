@@ -14,6 +14,11 @@ defmodule Managoat.Sprite.HTTP do
     json(conn, if(ready, do: 200, else: 503), %{ready: ready, inference_verified: false})
   end
 
+  get "/api/openapi.json" do
+    path = Application.app_dir(:managoat_sprite, "priv/openapi.json")
+    conn |> put_resp_content_type("application/json") |> send_resp(200, File.read!(path))
+  end
+
   get "/api/capabilities" do
     json(conn, 200, %{
       contract: "fountain-conversations-v1",
@@ -193,6 +198,9 @@ defmodule Managoat.Sprite.HTTP do
       conn.request_path == "/healthz" ->
         conn
 
+      Enum.any?(conn.query_params, fn {_, value} -> not is_binary(value) end) ->
+        conn |> error(422, "invalid_query") |> halt()
+
       get_req_header(conn, "x-fountain-parent-conversation-id") != [] or
           get_req_header(conn, "x-aod-parent-conversation-id") != [] ->
         conn |> error(422, "unsupported_feature") |> halt()
@@ -279,12 +287,14 @@ defmodule Managoat.Sprite.HTTP do
   defp exists(id), do: if(Store.call({:get, id}), do: :ok, else: {:error, {404, "not_found"}})
   defp integer(nil, default), do: {:ok, default}
 
-  defp integer(value, _) do
+  defp integer(value, _) when is_binary(value) do
     case Integer.parse(value) do
       {n, ""} when n >= 0 and n <= 9_007_199_254_740_991 -> {:ok, n}
       _ -> {:error, {422, "invalid_cursor"}}
     end
   end
+
+  defp integer(_, _), do: {:error, {422, "invalid_cursor"}}
 
   defp idempotency_key(conn) do
     case get_req_header(conn, "idempotency-key") do
@@ -320,6 +330,7 @@ defmodule Managoat.Sprite.HTTP do
   defp stream(conn, id, cursor) do
     conn =
       conn
+      |> assign(:revision, Store.call(:revision))
       |> put_resp_content_type("text/event-stream")
       |> put_resp_header("cache-control", "no-cache")
       |> put_resp_header("x-accel-buffering", "no")
@@ -332,6 +343,25 @@ defmodule Managoat.Sprite.HTTP do
   end
 
   defp tail(conn, id, cursor, last_event, last_heartbeat) do
+    revision = if is_nil(id), do: Store.call(:revision), else: conn.assigns.revision
+
+    result =
+      if revision != conn.assigns.revision do
+        chunk(conn, "event: conversations\ndata: {\"reason\":\"changed\"}\n\n")
+      else
+        {:ok, conn}
+      end
+
+    case result do
+      {:ok, conn} ->
+        tail_events(assign(conn, :revision, revision), id, cursor, last_event, last_heartbeat)
+
+      _ ->
+        conn
+    end
+  end
+
+  defp tail_events(conn, id, cursor, last_event, last_heartbeat) do
     rows = Store.call({:events, id, cursor, 1000, streams(conn)})
 
     result =
