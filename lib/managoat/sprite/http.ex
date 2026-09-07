@@ -10,8 +10,29 @@ defmodule Managoat.Sprite.HTTP do
   get("/healthz", do: json(conn, 200, %{ok: true}))
 
   get "/readyz" do
-    ready = Engine.ready?() and Engine.runtime().ready?()
-    json(conn, if(ready, do: 200, else: 503), %{ready: ready, inference_verified: false})
+    status = Engine.status()
+    runtime = Engine.runtime()
+    available = runtime.ready?()
+
+    initialized =
+      if function_exported?(runtime, :initialization_status, 0),
+        do: runtime.initialization_status(),
+        else: "unverified"
+
+    ready = status.recovery_complete and status.storage_available and available
+
+    status =
+      Map.merge(status, %{
+        ready: ready,
+        schema_ready: true,
+        runtime_available: available,
+        agent_initialization: initialized,
+        admission_available: status.admission_available and available,
+        inference_verified: false
+      })
+
+    status = if available, do: status, else: Map.put(status, :reason, "runtime_unavailable")
+    json(conn, if(ready, do: 200, else: 503), status)
   end
 
   get "/api/openapi.json" do

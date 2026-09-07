@@ -177,6 +177,33 @@ defmodule Managoat.Sprite.Runtime do
 
   def ready? do
     {cmd, _} = Runtimes.ACP.command(Config.get()["runtime"])
-    File.regular?(resolve(cmd))
+
+    case File.stat(resolve(cmd)) do
+      {:ok, %{type: :regular, mode: mode}} -> Bitwise.band(mode, 0o111) != 0
+      _ -> false
+    end
+  end
+
+  def initialization_record do
+    {cmd, _} = Runtimes.ACP.command(Config.get()["runtime"])
+    path = resolve(cmd)
+    stat = File.stat!(path, time: :posix)
+
+    %{
+      "runtime" => Config.get()["runtime"],
+      "executable" => path,
+      "size" => stat.size,
+      "mtime" => stat.mtime
+    }
+  end
+
+  def initialization_status do
+    with {:ok, bytes} <- File.read(Path.join(Config.root(), "state/runtime-initialized.json")),
+         {:ok, record} <- Jason.decode(bytes),
+         true <- ready?() and record == initialization_record() do
+      "verified_at_install"
+    else
+      _ -> "unverified"
+    end
   end
 end

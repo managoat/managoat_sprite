@@ -7,17 +7,23 @@ defmodule Managoat.Sprite.Release do
     {:ok, _} = Application.ensure_all_started(:managoat_sprite)
     c = Config.load!()
     Application.put_env(:managoat_sprite, :config, c)
+    Config.database_path!()
     hold = "managoat-install"
 
     Lifecycle.with_hold(hold, fn ->
       with :ok <- Runtime.install(), :ok <- Runtime.probe() do
-        {:ok, _} = Repo.start_link(database: Path.join(Config.root(), "state/managoat.sqlite3"))
+        {:ok, _} = Repo.start_link(database: Config.database_path!())
         {:ok, _} = Store.start_link([])
 
         :ok =
           Store.call(
             {:key, File.read!(Path.join(Config.root(), "config/client.key")) |> String.trim()}
           )
+
+        Config.private_write!(
+          Path.join(Config.root(), "state/runtime-initialized.json"),
+          Jason.encode!(Runtime.initialization_record())
+        )
 
         IO.puts(
           Jason.encode!(%{installed: true, agent_initialized: true, inference_verified: false})

@@ -7,12 +7,15 @@ import os
 from pathlib import Path
 import tempfile
 import sqlite3
+import socket
 import unittest
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('managoat_cli', Path(__file__).parents[1] / 'scripts/managoat.py')
 cli = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cli)
+real_check_port = cli.check_port
+real_api = cli.api
 
 
 class InstallerTests(unittest.TestCase):
@@ -32,6 +35,7 @@ class InstallerTests(unittest.TestCase):
         self.socket.start()
         self.service = patch.object(cli, 'service', return_value='[]').start()
         self.release = patch.object(cli, 'release', return_value='{}').start()
+        self.port_check = patch.object(cli, 'check_port').start()
         patch.object(cli, 'wait_ready').start()
         patch.object(cli, 'api', return_value={'ready': True, 'inference_verified': False}).start()
         self.environment = patch.dict(os.environ, {'MANAGOAT_API_KEY': 'test-client-key-with-at-least-24-characters'})
@@ -95,6 +99,56 @@ class InstallerTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'in progress'):
                 with cli.operation_lock():
                     self.fail('second operation acquired lock')
+
+    def test_bound_port_is_detected_without_interrupting_its_owner(self):
+        with socket.socket() as listener:
+            listener.bind(('127.0.0.1', 0))
+            listener.listen()
+            with self.assertRaisesRegex(RuntimeError, 'port_unavailable'):
+                real_check_port(listener.getsockname()[1])
+            self.assertGreater(listener.fileno(), 0)
+
+    def test_preflight_failure_does_not_persist_credentials(self):
+        self.port_check.side_effect = RuntimeError('port_unavailable')
+        with self.assertRaisesRegex(RuntimeError, 'port_unavailable'):
+            self.install()
+        self.assertFalse((cli.ROOT/'config/credentials.json').exists())
+        self.assertFalse(cli.CONFIG.exists())
+        self.release.assert_not_called()
+
+    def test_disk_reserve_failure_does_not_persist_credentials(self):
+        usage = type('DiskUsage', (), {'free': 0})()
+        with patch.object(cli.shutil, 'disk_usage', return_value=usage):
+            with self.assertRaisesRegex(RuntimeError, 'disk_reserve_exhausted'):
+                self.install()
+        self.assertFalse(cli.CONFIG.exists())
+        self.release.assert_not_called()
+
+    def test_workspace_file_is_preserved_and_rejected(self):
+        Path(self.args.workspace).write_text('existing user file')
+        with self.assertRaisesRegex(RuntimeError, 'workspace_invalid'):
+            self.install()
+        self.assertEqual(Path(self.args.workspace).read_text(), 'existing user file')
+        self.assertFalse(cli.CONFIG.exists())
+
+    def test_existing_service_name_cannot_be_taken_over(self):
+        self.service.return_value = json.dumps([{'name': 'managoat', 'cmd': '/some/other/app'}])
+        with self.assertRaisesRegex(RuntimeError, 'service_name_conflict'):
+            self.install()
+        self.release.assert_not_called()
+
+    def test_status_preserves_authenticated_degraded_readiness(self):
+        self.install()
+        body = {'ready': False, 'reason': 'storage_reserve_exhausted', 'schema_ready': True}
+        error = cli.urllib.error.HTTPError('http://localhost/readyz',503,'unavailable',{},io.BytesIO(json.dumps(body).encode()))
+        with patch.object(cli, 'api', side_effect=real_api), \
+                patch.object(cli.urllib.request, 'urlopen', side_effect=error), \
+                contextlib.redirect_stdout(io.StringIO()) as output:
+            cli.status(self.args)
+        status = json.loads(output.getvalue())
+        self.assertTrue(status['process_running'])
+        self.assertFalse(status['api_ready'])
+        self.assertEqual(status['reason'], 'storage_reserve_exhausted')
 
     def test_backup_restore_preserves_history_and_workspace_but_rotates_credentials(self):
         self.install()

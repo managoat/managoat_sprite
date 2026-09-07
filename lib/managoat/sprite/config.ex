@@ -82,6 +82,26 @@ defmodule Managoat.Sprite.Config do
 
   def get, do: Application.fetch_env!(:managoat_sprite, :config)
 
+  def database_path! do
+    state = Path.join(root(), "state")
+    path = Path.join(state, "managoat.sqlite3")
+
+    established =
+      File.exists?(Path.join(state, "installed.json")) or
+        File.exists?(Path.join(state, "database-created.json"))
+
+    valid =
+      case File.stat(path) do
+        {:ok, %{type: :regular, size: size}} -> size > 0
+        _ -> false
+      end
+
+    if established and not valid,
+      do: raise("database_missing: restore a backup; refusing to create empty history")
+
+    path
+  end
+
   def instructions do
     case File.read(Path.join(root(), "config/instructions.md")) do
       {:ok, text} ->

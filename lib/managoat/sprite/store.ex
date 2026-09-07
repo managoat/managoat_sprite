@@ -23,6 +23,12 @@ defmodule Managoat.Sprite.Store do
     )
 
     query("INSERT OR IGNORE INTO installation(id,identity) VALUES(1,?)", [Config.id()])
+
+    Config.private_write!(
+      Path.join(Config.root(), "state/database-created.json"),
+      Jason.encode!(%{identity: operate(:identity)})
+    )
+
     {:ok, %{revision: System.unique_integer([:positive, :monotonic])}}
   end
 

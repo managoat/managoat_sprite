@@ -48,6 +48,26 @@ defmodule Managoat.Sprite.HTTPTest do
              403
   end
 
+  test "readiness explains exhausted storage without making a model request" do
+    ready = request(:get, "/readyz")
+    assert ready.status == 200
+    assert decode(ready)["schema_ready"]
+    assert decode(ready)["admission_available"]
+
+    Application.put_env(
+      :managoat_sprite,
+      :config,
+      Map.put(Config.get(), "disk_reserve_bytes", 1_000_000_000_000_000_000)
+    )
+
+    degraded = request(:get, "/readyz")
+    assert degraded.status == 503
+    assert decode(degraded)["reason"] == "storage_reserve_exhausted"
+    refute decode(degraded)["admission_available"]
+    assert request(:get, "/api/conversations").status == 200
+    refute_received {:scripted_agent, :wrote, %{"method" => "session/prompt"}}
+  end
+
   test "reject unsupported features and malformed cursors" do
     assert request(:post, "/api/conversations", %{prompt: "hi", images: []}).status == 422
     assert request(:post, "/api/conversations", %{prompt: "hi", agent_id: "other"}).status == 404

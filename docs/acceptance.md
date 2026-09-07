@@ -8,9 +8,9 @@ asset is claimed to exist yet.
 
 | Check | Result |
 |---|---|
-| Elixir `mix check` | 22 tests cover real ACP ScriptedAgent, HTTP auth/CORS, continuity, normalized blocks, idempotency, pagination, permissions, concurrent admission, recovery, cancellation, output budget, unavailable task hold, subprocess behavior, immutable launch definitions and permission tightening on follow-up and pending recovery |
-| Python management tests on macOS | 10 pass; Linux watchdog test skipped on macOS |
-| Python tests on Linux | All 11 pass, including the watchdog with real detached grandchildren, BEAM substitute SIGKILL, restart, shutdown cleanup and split-write credential redaction |
+| Elixir `mix check` | 25 tests cover real ACP ScriptedAgent, HTTP auth/CORS, continuity, normalized blocks, idempotency, pagination, permissions, concurrent admission, recovery, cancellation, output budget, unavailable task hold, subprocess behavior, immutable launch definitions, policy tightening, degraded readiness and missing-database startup guards |
+| Python management tests on macOS | 16 pass; Linux watchdog test skipped on macOS |
+| Python tests on Linux | All 17 pass, including real occupied-port detection, installer failure preservation, degraded status parsing, and the watchdog with detached grandchildren, restart, shutdown cleanup and split-write credential redaction |
 | Release packaging | Bundled ERTS release built on x86_64 Linux; no Elixir compilation required by the installer |
 | Clean Sprite install | Verified archive supplied through `MANAGOAT_ARCHIVE`; installer imports a credential file, provisions Codex, creates the service and returns authenticated readiness without manual repair |
 | Real paid inference | `managoat doctor --inference` completed using the supplied OpenAI credential on both the build Sprite and a second clean Sprite |
@@ -19,6 +19,7 @@ asset is claimed to exist yet.
 | Real BEAM SIGKILL during a tool | API restarted; turn became `interrupted` with `execution_outcome_unknown`; owned `sleep` process was gone before recovery; completion sentinel was absent; prompt was not replayed |
 | Existing template client through private tunnel | Actual `FountainClient` and SSE parser passed auth, CORS preflight, agent discovery, create, history, global streaming, follow-up context, exclusive cursor replay and interruption |
 | Management fault injection | Consistent backup/restore retains history, session files and optional workspace while omitting keys; failed download, migration and candidate health checks retain or restore the previous release/database |
+| Live readiness diagnostics | Updated test service reports installed, process reachable, API ready, schema ready, runtime available, local initialization verified at install, free admission capacity and external access unverified; no paid inference was needed |
 
 Client source revision: `fountain-template-chat`
 `c9ba5d2f13cdacdf21da9e0a7460391b1406d882`. Run
@@ -65,8 +66,8 @@ The full contract remains [the specification](spec.md). In particular:
 - The full fault matrix at dispatch, permission-answer and completion
   boundaries; renewal failures; slow readers; corrupt sessions and database;
   disk exhaustion; and real maintenance failure tests on a Sprite.
-- Final audit of readiness detail, installer
-  preflight diagnostics and all resource bounds against the specification.
+- Final audit of remaining installer diagnostics, database recovery diagnostics
+  and all resource bounds against the specification.
 
 Launch definitions now have durable `agents` snapshots referenced by each
 conversation and turn. Pre-release history created before these snapshots

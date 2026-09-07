@@ -10,6 +10,7 @@ from pathlib import Path
 import secrets
 import shutil
 import signal
+import socket
 import sqlite3
 import subprocess
 import sys
@@ -61,13 +62,19 @@ def release(command, expression):
     return run([CURRENT / 'bin/managoat', command, expression], capture=True, env=env)
 
 
-def api(path, method='GET', body=None):
+def api(path, method='GET', body=None, allow_status=()):
     c = config()
     key = (ROOT / 'config/client.key').read_text().strip()
     req = urllib.request.Request(f'http://127.0.0.1:{c["port"]}{path}',
         data=json.dumps(body).encode() if body is not None else None,
         headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'}, method=method)
-    with urllib.request.urlopen(req, timeout=30) as response:
+    try:
+        response = urllib.request.urlopen(req, timeout=30)
+    except urllib.error.HTTPError as error:
+        if error.code not in allow_status:
+            raise
+        response = error
+    with response:
         data = response.read()
         return json.loads(data) if data else None
 
@@ -81,6 +88,35 @@ def wait_ready():
             pass
         time.sleep(1)
     raise RuntimeError('service did not become ready; inspect managoat logs')
+
+
+def check_port(port, host='0.0.0.0'):
+    family = socket.AF_INET6 if ':' in host else socket.AF_INET
+    with socket.socket(family, socket.SOCK_STREAM) as listener:
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            listener.bind((host, port))
+        except OSError:
+            raise RuntimeError(f'port_unavailable: cannot bind {host}:{port}; choose --port or stop its owner') from None
+
+
+def preflight(workspace, port, reserve=268435456, host='0.0.0.0'):
+    check_port(port, host)
+    for label, destination in [('application', ROOT), ('workspace', workspace)]:
+        ancestor = destination
+        while not ancestor.exists():
+            ancestor = ancestor.parent
+        if not ancestor.is_dir():
+            raise RuntimeError(f'{label}_invalid: path is not a directory')
+        if shutil.disk_usage(ancestor).free < reserve:
+            raise RuntimeError(f'{label}_disk_reserve_exhausted: free at least {reserve} bytes before installing')
+        try:
+            with tempfile.TemporaryFile(dir=ancestor) as probe:
+                probe.write(b'managoat preflight')
+                probe.flush()
+                os.fsync(probe.fileno())
+        except OSError:
+            raise RuntimeError(f'{label}_not_writable: choose a writable directory') from None
 
 
 @contextlib.contextmanager
@@ -127,6 +163,9 @@ def install(args):
     others = [s for s in definitions if s.get('http_port') and s.get('name') != 'managoat']
     if others and not args.no_http_route:
         raise RuntimeError('http_service_conflict: another Sprite service owns HTTP routing')
+    own = next((s for s in definitions if s.get('name') == 'managoat'), None)
+    if own and own.get('cmd') != str(ROOT / 'service'):
+        raise RuntimeError('service_name_conflict: managoat is registered to another command')
     if CONFIG.exists():
         c = config()
         if args.runtime and args.runtime != c['runtime']:
@@ -138,6 +177,17 @@ def install(args):
             wait_ready()
             status(args)
             return
+        if own:
+            try:
+                recovered = api('/readyz')['ready']
+            except (OSError, ValueError):
+                recovered = False
+            if recovered:
+                write_private(ROOT / 'state/installed.json', json.dumps({'version': (CURRENT / 'VERSION').read_text().strip()}))
+                status(args)
+                return
+            service('stop', 'managoat')
+        preflight(Path(c['workspace']), c['port'], c.get('disk_reserve_bytes',268435456), c.get('host','0.0.0.0'))
     else:
         runtime = args.runtime or 'claude'
         credential_name = args.credential_env or ('OPENAI_API_KEY' if runtime == 'codex' else 'ANTHROPIC_API_KEY')
@@ -153,6 +203,7 @@ def install(args):
         if not 0 < args.port < 65536:
             raise RuntimeError('invalid port')
         workspace = Path(args.workspace or Path.home() / 'project').resolve()
+        preflight(workspace, args.port)
         workspace.mkdir(parents=True, exist_ok=True)
         for path in [ROOT / 'config', ROOT / 'state', ROOT / 'runtime']:
             path.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -168,7 +219,7 @@ def install(args):
     release('eval', 'Managoat.Sprite.Release.install()')
     create = ['create', 'managoat', '--cmd', str(ROOT / 'service'), '--no-stream']
     if not args.no_http_route:
-        create.extend(['--http-port', str(args.port)])
+        create.extend(['--http-port', str(c['port'])])
     if any(d.get('name') == 'managoat' for d in definitions):
         service('start', 'managoat')
     else:
@@ -182,11 +233,16 @@ def status(args):
     data = {'version': (CURRENT / 'VERSION').read_text().strip(), 'service': 'managoat',
             'agent_id': 'default', 'runtime': config()['runtime'], 'workspace': config()['workspace'],
             'local_api': f'http://127.0.0.1:{config()["port"]}/api',
-            'key_file': str(ROOT / 'config/client.key'), 'external_access': 'unverified'}
+            'key_file': str(ROOT / 'config/client.key'), 'external_access': 'unverified',
+            'installed': (ROOT / 'state/installed.json').exists(), 'process_running': None,
+            'api_ready': False, 'agent_initialization': 'unverified'}
     try:
-        data.update(api('/readyz'))
+        data.update(api('/readyz', allow_status=(503,)))
+        data['process_running'] = True
+        data['api_ready'] = data['ready']
     except (OSError, ValueError):
         data['ready'] = False
+        data['reason'] = 'api_unreachable'
     if args.json:
         print(json.dumps(data))
     else:

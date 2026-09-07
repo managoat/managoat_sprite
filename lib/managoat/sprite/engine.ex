@@ -8,6 +8,7 @@ defmodule Managoat.Sprite.Engine do
   def answer(id, rid, option), do: GenServer.call(__MODULE__, {:answer, id, rid, option}, 15_000)
   def execution(pid), do: GenServer.call(__MODULE__, {:execution, pid})
   def ready?, do: GenServer.call(__MODULE__, :ready)
+  def status, do: GenServer.call(__MODULE__, :status)
   def runtime, do: Application.get_env(:managoat_sprite, :runtime, Managoat.Sprite.Runtime)
 
   def terminate_conversation(id, delete? \\ false) do
@@ -63,6 +64,28 @@ defmodule Managoat.Sprite.Engine do
 
   @impl true
   def handle_call(:ready, _, s), do: {:reply, s.ready, s}
+
+  def handle_call(:status, _, s) do
+    storage = disk_available?()
+    busy = not is_nil(s.worker)
+
+    reason =
+      cond do
+        not s.ready -> "recovery_or_cleanup_pending"
+        not storage -> "storage_reserve_exhausted"
+        busy -> "turn_active"
+        true -> nil
+      end
+
+    {:reply,
+     %{
+       recovery_complete: s.ready,
+       storage_available: storage,
+       admission_available: s.ready and storage and not busy,
+       reason: reason
+     }, s}
+  end
+
   def handle_call({:execution, pid}, _, s), do: {:reply, :ok, %{s | execution: pid}}
 
   def handle_call({:admit, id, attrs, key}, _, s) do

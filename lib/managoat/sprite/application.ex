@@ -26,7 +26,7 @@ defmodule Managoat.Sprite.Application do
     File.chmod!(state, 0o700)
 
     [
-      {Repo, database: Path.join(state, "managoat.sqlite3")},
+      {Repo, database: Config.database_path!()},
       Store,
       Engine,
       {DynamicSupervisor, strategy: :one_for_one, name: Managoat.Sprite.Workers}

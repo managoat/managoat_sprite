@@ -26,6 +26,9 @@ claude` uses `ANTHROPIC_API_KEY`. The installer downloads a checksummed Linux
 release containing Erlang, installs pinned agent tools in an application-owned
 home, registers a Sprite Service, and checks authenticated HTTP readiness.
 It does not require a Fountain account, external database, or build tools.
+Before saving credentials, installation checks writable paths, disk reserve,
+port availability and service ownership. It reports named failures such as
+`port_unavailable`, `workspace_invalid` and `service_name_conflict`.
 
 The application key is generated locally (or supplied as `MANAGOAT_API_KEY`):
 
@@ -81,6 +84,18 @@ The default application root is `~/.local/share/managoat`; `MANAGOAT_ROOT`
 overrides it. Configuration is `config/config.json`, the application key is
 `config/client.key`, and SQLite is `state/managoat.sqlite3`. Secrets are stored
 in private files and are excluded from ordinary command output.
+
+`status --json` separates installation state, API reachability, runtime
+availability, admission capacity and external access. `agent_initialization:
+verified_at_install` reports a successful local handshake against the recorded
+adapter executable; provider credentials are verified only by an explicit
+inference probe. A busy turn does not make the API unhealthy. An exhausted disk
+reserve produces an authenticated readiness response with its failure reason.
+An unreachable API leaves `process_running` unknown rather than claiming the
+process has stopped.
+
+If an established database is missing or empty, startup refuses to create a
+replacement. Restore a backup to recover history.
 
 A browser disconnect does not cancel work. Active turns hold a finite Sprite
 task that is renewed while they run. Idle SSE clients should disconnect when
