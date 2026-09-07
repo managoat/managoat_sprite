@@ -8,7 +8,7 @@ asset is claimed to exist yet.
 
 | Check | Result |
 |---|---|
-| Elixir `mix check` | 25 tests cover real ACP ScriptedAgent, HTTP auth/CORS, continuity, normalized blocks, idempotency, pagination, permissions, concurrent admission, recovery, cancellation, output budget, unavailable task hold, subprocess behavior, immutable launch definitions, policy tightening, degraded readiness and missing-database startup guards |
+| Elixir `mix check` | 27 tests cover real ACP ScriptedAgent, HTTP auth/CORS, continuity, normalized blocks, idempotency, pagination, permissions, concurrent admission, recovery, cancellation, output budget, unavailable task hold, subprocess behavior, immutable launch definitions, policy tightening, degraded readiness, missing-database startup guards and producer/ACP overload |
 | Python management tests on macOS | 16 pass; Linux watchdog test skipped on macOS |
 | Python tests on Linux | All 17 pass, including real occupied-port detection, installer failure preservation, degraded status parsing, and the watchdog with detached grandchildren, restart, shutdown cleanup and split-write credential redaction |
 | Release packaging | Bundled ERTS release built on x86_64 Linux; no Elixir compilation required by the installer |
@@ -20,6 +20,7 @@ asset is claimed to exist yet.
 | Existing template client through private tunnel | Actual `FountainClient` and SSE parser passed auth, CORS preflight, agent discovery, create, history, global streaming, follow-up context, exclusive cursor replay and interruption |
 | Management fault injection | Consistent backup/restore retains history, session files and optional workspace while omitting keys; failed download, migration and candidate health checks retain or restore the previous release/database |
 | Live readiness diagnostics | Updated test service reports installed, process reachable, API ready, schema ready, runtime available, local initialization verified at install, free admission capacity and external access unverified; no paid inference was needed |
+| Producer/ACP overload | Real `yes` subprocess stops at a small test queue threshold with one terminal error; a suspended real ACP peer causes durable `output_backpressure_exceeded` failure with bounded queued input. These checks do not qualify slow HTTP subscribers or total application memory usage. |
 
 Client source revision: `fountain-template-chat`
 `c9ba5d2f13cdacdf21da9e0a7460391b1406d882`. Run

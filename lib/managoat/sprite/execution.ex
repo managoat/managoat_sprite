@@ -39,7 +39,15 @@ defmodule Managoat.Sprite.Execution do
     case :exec.run_link([cmd | args], base) do
       {:ok, pid, os_pid} ->
         {:ok,
-         %{pid: pid, os_pid: os_pid, owner: owner, monitor: Process.monitor(owner), stop: []}}
+         %{
+           pid: pid,
+           os_pid: os_pid,
+           owner: owner,
+           monitor: Process.monitor(owner),
+           stop: [],
+           queue_limit: Keyword.get(opts, :queue_limit, 1024),
+           failure: nil
+         }}
 
       {:error, _} ->
         {:stop, :spawn_failed}
@@ -57,8 +65,18 @@ defmodule Managoat.Sprite.Execution do
   @impl true
   def handle_info({stream, os_pid, data}, %{os_pid: os_pid} = s)
       when stream in [:stdout, :stderr] do
-    send(s.owner, {stream, %{ref: self()}, data})
-    {:noreply, s}
+    cond do
+      s.failure != nil ->
+        {:noreply, s}
+
+      overloaded?(s.owner, s.queue_limit) or overloaded?(self(), s.queue_limit) ->
+        :exec.stop(s.os_pid)
+        {:noreply, %{s | failure: :output_backpressure_exceeded}}
+
+      true ->
+        send(s.owner, {stream, %{ref: self()}, data})
+        {:noreply, s}
+    end
   end
 
   def handle_info({:DOWN, os_pid, :process, _, reason}, %{os_pid: os_pid} = s) do
@@ -78,7 +96,7 @@ defmodule Managoat.Sprite.Execution do
           {:error, :process_lost}
       end
 
-    {kind, value} = terminal
+    {kind, value} = if s.failure, do: {:error, s.failure}, else: terminal
     send(s.owner, {kind, %{ref: self()}, value})
     Enum.each(s.stop, &GenServer.reply(&1, :ok))
     {:stop, :normal, s}
@@ -93,6 +111,14 @@ defmodule Managoat.Sprite.Execution do
     do: handle_info({:DOWN, s.os_pid, :process, pid, reason}, s)
 
   def handle_info({:EXIT, _, _}, s), do: {:noreply, s}
+
+  defp overloaded?(pid, limit) do
+    case Process.info(pid, :message_queue_len) do
+      {:message_queue_len, length} -> length >= limit
+      nil -> true
+    end
+  end
+
   @impl true
   def format_status(status) do
     # OTP crash reports are operational logs, never a copy of a prompt or key.

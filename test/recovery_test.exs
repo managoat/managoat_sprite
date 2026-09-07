@@ -48,6 +48,26 @@ defmodule Managoat.Sprite.RecoveryTest do
     assert Jason.decode!(record)["status"] == "resolved"
   end
 
+  test "a stalled ACP consumer fails the turn before its input queue grows unbounded" do
+    id = waiting_conversation()
+    worker = :sys.get_state(Engine).worker
+    %{peer: peer, command: command} = :sys.get_state(worker)
+    :sys.suspend(peer)
+
+    try do
+      frame = Jason.encode!(%{jsonrpc: "2.0", method: "test/notification", params: %{}}) <> "\n"
+      for _ <- 1..1025, do: send(worker, {:stdout, %{ref: command}, frame})
+      eventually(fn -> assert Store.call(:active) == nil end)
+      [turn] = Store.call({:turns, id})
+      assert turn["status"] == "failed"
+      assert turn["failure_reason"] == "output_backpressure_exceeded"
+      {:message_queue_len, count} = Process.info(peer, :message_queue_len)
+      assert count <= 1030
+    after
+      if Process.alive?(peer), do: :sys.resume(peer)
+    end
+  end
+
   test "pending admission recovers and dispatch intent never replays" do
     {:ok, _, turn} = Store.call({:admit, nil, %{"prompt" => "recover"}, nil})
     assert turn["status"] == "pending"

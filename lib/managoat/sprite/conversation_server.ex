@@ -86,16 +86,27 @@ defmodule Managoat.Sprite.ConversationServer do
   def handle_info({:stdout, %{ref: command}, data}, %{command: command} = s) do
     bytes = s.wire_bytes + byte_size(data)
 
-    if bytes > Config.get()["max_output_bytes"] do
-      finish(s, "failed", "output_budget_exceeded", nil)
-    else
-      Peer.stdout(s.peer, data)
-      {:noreply, %{s | wire_bytes: bytes}}
+    cond do
+      bytes > Config.get()["max_output_bytes"] ->
+        finish(s, "failed", "output_budget_exceeded", nil)
+
+      peer_overloaded?(s.peer) ->
+        finish(s, "failed", "output_backpressure_exceeded", nil)
+
+      true ->
+        Peer.stdout(s.peer, data)
+        {:noreply, %{s | wire_bytes: bytes}}
     end
   end
 
   def handle_info({:stderr, %{ref: command}, data}, %{command: command} = s),
     do: output(s, "stderr", data)
+
+  def handle_info(
+        {:error, %{ref: command}, :output_backpressure_exceeded},
+        %{command: command} = s
+      ),
+      do: finish(s, "failed", "output_backpressure_exceeded", nil)
 
   def handle_info({kind, %{ref: command}, _}, %{command: command} = s)
       when kind in [:exit, :error], do: finish(s, "failed", "runtime_exited", nil)
@@ -198,6 +209,13 @@ defmodule Managoat.Sprite.ConversationServer do
 
   defp report({:failed, _}, s), do: finish(s, "failed", "acp_failed", nil)
   defp report(_, s), do: {:noreply, s}
+
+  defp peer_overloaded?(peer) do
+    case Process.info(peer, :message_queue_len) do
+      {:message_queue_len, count} -> count >= 1024
+      nil -> false
+    end
+  end
 
   defp output(s, stream, data) do
     bytes = s.bytes + byte_size(data)

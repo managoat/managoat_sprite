@@ -39,4 +39,22 @@ defmodule Managoat.Sprite.ExecutionTest do
     Process.exit(owner, :kill)
     assert_receive {:DOWN, ^monitor, :process, ^p, :normal}, 5000
   end
+
+  test "fast output stops at a bounded owner queue and emits one terminal error" do
+    {:ok, p} = Execution.start(System.find_executable("yes"), [], queue_limit: 4)
+    # Selectively wait for the terminal frame, leaving output unconsumed.
+    assert_receive {:error, %{ref: ^p}, :output_backpressure_exceeded}, 5000
+    {:messages, messages} = Process.info(self(), :messages)
+
+    outputs =
+      Enum.count(messages, fn
+        {:stdout, %{ref: ^p}, _} -> true
+        _ -> false
+      end)
+
+    assert outputs <= 4
+    refute_receive {:exit, %{ref: ^p}, _}
+    refute_receive {:error, %{ref: ^p}, _}
+    assert Execution.write(p, "late") == {:error, :command_exited}
+  end
 end

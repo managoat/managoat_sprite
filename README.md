@@ -97,6 +97,11 @@ process has stopped.
 If an established database is missing or empty, startup refuses to create a
 replacement. Restore a backup to recover history.
 
+The subprocess bridge and ACP input enforce a 1,024-message overload threshold.
+An overloaded turn stops with `output_backpressure_exceeded`. This is separate
+from the configured maximum output size per turn: a fast producer can reach the
+queue threshold before reaching that size limit.
+
 A browser disconnect does not cancel work. Active turns hold a finite Sprite
 task that is renewed while they run. Idle SSE clients should disconnect when
 they have nothing to follow, since reconnecting clients can keep a Sprite awake.
