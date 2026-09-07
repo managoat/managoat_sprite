@@ -1,13 +1,16 @@
 # Acceptance record
 
 Updated 2026-09-07. This is a working implementation under qualification, not
-an accepted or published v0.1 release. No hosted installer or public release
-asset is claimed to exist yet.
+an accepted or published v0.1 release. The source is public at
+[managoat/managoat_sprite](https://github.com/managoat/managoat_sprite).
+Distributable release assets are not published yet, so the hosted installation
+script cannot complete a GitHub release download yet.
 
 ## Executed checks
 
 | Check | Result |
 |---|---|
+| Source publication | Public GitHub repository created and committed source pushed; repository visibility verified as PUBLIC |
 | Elixir `mix check` | 27 tests cover real ACP ScriptedAgent, HTTP auth/CORS, continuity, normalized blocks, idempotency, pagination, permissions, concurrent admission, recovery, cancellation, output budget, unavailable task hold, subprocess behavior, immutable launch definitions, policy tightening, degraded readiness, missing-database startup guards and producer/ACP overload |
 | Python management tests on macOS | 16 pass; Linux watchdog test skipped on macOS |
 | Python tests on Linux | All 17 pass, including real occupied-port detection, installer failure preservation, degraded status parsing, and the watchdog with detached grandchildren, restart, shutdown cleanup and split-write credential redaction |
@@ -57,7 +60,7 @@ before tagging a release.
 
 The full contract remains [the specification](spec.md). In particular:
 
-- Public repository publication, CI on GitHub, AMD64/ARM64 release artifacts,
+- CI on GitHub, AMD64/ARM64 release artifacts,
   and a clean install directly from the eventual public distribution URL.
 - Claude real inference, permission and continuation parity. Only an OpenAI
   credential was supplied for live provider tests; Claude is implemented but

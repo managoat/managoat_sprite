@@ -8,7 +8,9 @@ Provision a Sprite, run one installation command inside it, and that computer no
 
 The Sprite already exists. Managoat adopts the computer it is installed on. Creating a conversation never provisions another machine. Ending or deleting a conversation never destroys the Sprite or removes the operator's workspace.
 
-Working product and executable name: `managoat`. Repository and OTP application: `managoat_sprite`. These names and the distribution URL below are proposals, not published artifacts.
+Product and executable name: `managoat`. Repository and OTP application: `managoat_sprite`.
+The source is published at https://github.com/managoat/managoat_sprite. The
+distribution URL below remains proposed; release assets are still under qualification.
 
 ## The installation experience
 
