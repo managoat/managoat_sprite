@@ -10,7 +10,9 @@ The Sprite already exists. Managoat adopts the computer it is installed on. Crea
 
 Product and executable name: `managoat`. Repository and OTP application: `managoat_sprite`.
 The source is published at https://github.com/managoat/managoat_sprite. The
-distribution URL below remains proposed; release assets are still under qualification.
+custom distribution URL below remains proposed. The v0.1.0 preview is distributed
+through GitHub Releases; see README.md for the working installer command and
+acceptance.md for qualification status.
 
 ## The installation experience
 

@@ -30,11 +30,11 @@ Conversations have separate sessions but share the same files. Creating or delet
 one does not create or destroy a Sprite. There is no bundled web UI; use the API
 from a terminal, your own app, or a compatible Fountain chat client.
 
-> **Release preview:** The [acceptance record](docs/acceptance.md) documents live
-> Codex installation, inference, tools, and continuation checks. Release downloads
-> are not published yet; use the source-build path below to try the implementation.
-> Claude is implemented but still needs live qualification. The
-> [specification](docs/spec.md) describes the full target, including remaining work.
+> **Preview release:** [v0.1.0](https://github.com/managoat/managoat_sprite/releases/tag/v0.1.0)
+> provides Linux AMD64 and ARM64 downloads. Codex has passed live installation,
+> inference, tools, and continuation checks; Claude still needs live qualification.
+> See the [acceptance record](docs/acceptance.md) for verified behavior and the
+> [specification](docs/spec.md) for the full target and remaining work.
 
 ## Setup
 
@@ -77,39 +77,20 @@ export OPENAI_API_KEY
 This key pays for model requests. Managoat generates a separate application key
 for clients of your conversations API.
 
-### 2. Build and install the preview
+### 2. Install Managoat
 
-Until release downloads are available, build an archive on Linux. The release
-workflow uses Ubuntu 24.04, Erlang/OTP 28.1, and Elixir 1.19.2; install those build
-tools plus Git and a C/C++ build toolchain before running this section. You can
-build directly on the Sprite or on a compatible Linux machine with the same CPU
-architecture. A macOS release cannot be installed on a Linux Sprite.
+With `OPENAI_API_KEY` exported, run inside the Sprite:
 
 ```sh
-git clone https://github.com/managoat/managoat_sprite.git
-cd managoat_sprite
-mix deps.get
-mix check
-python3 -m unittest discover -s test -p '*_test.py' -v
-sh scripts/build-release.sh
-```
-
-The build writes an archive and adjacent `.sha256` file under `dist/`. Inside the
-Sprite, from this checkout, install the matching archive:
-
-```sh
-# Use managoat-linux-arm64.tar.gz on an ARM64 Sprite.
-MANAGOAT_ARCHIVE="$PWD/dist/managoat-linux-amd64.tar.gz" \
-  sh install.sh --runtime codex --credential-env OPENAI_API_KEY \
-  --workspace /home/sprite/project
+curl -fsSL https://raw.githubusercontent.com/managoat/managoat_sprite/v0.1.0/install.sh | sh -s -- \
+  --runtime codex --credential-env OPENAI_API_KEY --workspace /home/sprite/project
 
 export PATH="$HOME/.local/bin:$PATH"
 managoat status
 ```
 
-If you built elsewhere, copy both the archive and its `.sha256` file to the
-Sprite and set `MANAGOAT_ARCHIVE` to that local archive path. Only the build
-machine needs Elixir and Erlang; the archive bundles the Erlang runtime.
+The release bundles Erlang; installation does not need Elixir, Erlang, or a build
+toolchain. [Build from source](#build-a-linux-release) if you want to change Managoat.
 
 The installer verifies the archive, installs pinned agent tools in an
 application-owned home, saves the selected credential, creates the API key, and
@@ -130,14 +111,6 @@ Useful installer options:
 Another service owning Sprite HTTP routing causes `http_service_conflict`.
 Changing the port does not resolve routing ownership; use `--no-http-route` when
 you intend to configure your own gateway.
-
-Once published release archives are available, the build step can be replaced
-with this command inside the Sprite. **This download path is not live yet:**
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/managoat/managoat_sprite/main/install.sh | sh -s -- \
-  --runtime codex --credential-env OPENAI_API_KEY --workspace /home/sprite/project
-```
 
 ### 3. Check readiness and connect
 
@@ -333,7 +306,42 @@ python3 -m unittest discover -s test -p '*_test.py' -v
 ```
 
 The tests use the real ACP ScriptedAgent and real local subprocesses. Live Sprite
-checks are tracked separately from local test results.
+checks are tracked separately from local test results. The Linux watchdog test
+requires Linux; it is skipped on macOS.
+
+### Build a Linux release
+
+The release workflow builds on Ubuntu 24.04 with Erlang/OTP 28.1 and Elixir 1.19.2.
+Install those tools, Git, and a C/C++ build toolchain on your Linux build machine:
+
+```sh
+git clone https://github.com/managoat/managoat_sprite.git
+cd managoat_sprite
+mix deps.get
+mix check
+python3 -m unittest discover -s test -p '*_test.py' -v
+sh scripts/build-release.sh
+```
+
+The build writes an archive and adjacent `.sha256` file under `dist/`. To try it,
+copy both files to a Sprite with the same CPU architecture, then run from a source
+checkout inside the Sprite with your inference credential exported:
+
+```sh
+# Use managoat-linux-arm64.tar.gz on an ARM64 Sprite.
+MANAGOAT_ARCHIVE="$PWD/dist/managoat-linux-amd64.tar.gz" \
+  sh install.sh --runtime codex --credential-env OPENAI_API_KEY \
+  --workspace /home/sprite/project
+```
+
+Set `MANAGOAT_ARCHIVE` to the actual archive path if you copied it elsewhere.
+A macOS release cannot be installed on a Linux Sprite. The build machine needs
+Elixir and Erlang; the target Sprite does not.
+
+Release tags run both architecture test/build jobs and stage a draft GitHub
+release. Verify the archives and a clean Sprite installation before publishing
+the draft. The initial `v0.1.0` distribution is marked as a prerelease while the
+remaining acceptance gates are open.
 
 - [Setup and operation](docs/guide.md): configuration, backup/restore, upgrades, and client integration checks.
 - [API contract](docs/spec.md#http-contract) and [OpenAPI document](priv/openapi.json): endpoints, envelopes, events, and error semantics.

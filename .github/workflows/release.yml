@@ -20,6 +20,14 @@ jobs:
       - run: mix check
       - run: python3 -m unittest discover -s test -p '*_test.py' -v
       - run: sh scripts/build-release.sh
+      - name: Verify packaged runtime and tag version
+        run: |
+          release_dir=$(mktemp -d)
+          trap 'rm -rf "$release_dir"' EXIT
+          (cd dist && sha256sum -c *.sha256)
+          tar -xzf dist/managoat-linux-*.tar.gz -C "$release_dir"
+          test "$(cat "$release_dir/VERSION")" = "${GITHUB_REF_NAME#v}"
+          "$release_dir/bin/managoat" eval 'IO.puts("Packaged runtime ready")'
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.runner }}
@@ -36,7 +44,7 @@ jobs:
           pattern: release-*
           merge-multiple: true
           path: dist
-      - name: Publish release
+      - name: Stage draft release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --title "Managoat Sprite $GITHUB_REF_NAME" --notes-file docs/release-notes.md
+        run: gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --draft --title "Managoat Sprite $GITHUB_REF_NAME" --notes-file docs/release-notes.md

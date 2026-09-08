@@ -1,10 +1,10 @@
 # Acceptance record
 
-Updated 2026-09-07. This is a working implementation under qualification, not
-an accepted or published v0.1 release. The source is public at
+Updated 2026-09-08. [v0.1.0](https://github.com/managoat/managoat_sprite/releases/tag/v0.1.0)
+is the initial preview distribution, with Linux AMD64 and ARM64 archives and
+checksums. Publishing this prerelease does not mean the full v0.1 specification
+has passed acceptance. The source is public at
 [managoat/managoat_sprite](https://github.com/managoat/managoat_sprite).
-Distributable release assets are not published yet, so the hosted installation
-script cannot complete a GitHub release download yet.
 
 ## Executed checks
 
@@ -36,7 +36,7 @@ The clean-install archive used Codex CLI `0.153.4`, OTP `28.1`, and Elixir
 `9e4289cccc09b0af14ee6bc38908f02c761d23bf8b8fe1a7eaa6770cb145c94a`.
 This is a development artifact, not a signed or published release. Later source
 changes receive their own build/test checks and must be qualified together
-before tagging a release.
+for each release candidate.
 
 ## Findings incorporated into the implementation
 
@@ -56,12 +56,10 @@ before tagging a release.
   produced by the build. A binary transfer through the Sprites exec CLI lost
   data; this was a test-transfer failure, not a valid installable archive.
 
-## Remaining release gates
+## Remaining qualification gates
 
 The full contract remains [the specification](spec.md). In particular:
 
-- CI on GitHub, AMD64/ARM64 release artifacts,
-  and a clean install directly from the eventual public distribution URL.
 - Claude real inference, permission and continuation parity. Only an OpenAI
   credential was supplied for live provider tests; Claude is implemented but
   is not qualified by these results.

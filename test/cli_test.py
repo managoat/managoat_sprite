@@ -105,7 +105,7 @@ class InstallerTests(unittest.TestCase):
             listener.bind(('127.0.0.1', 0))
             listener.listen()
             with self.assertRaisesRegex(RuntimeError, 'port_unavailable'):
-                real_check_port(listener.getsockname()[1])
+                real_check_port(listener.getsockname()[1], host='127.0.0.1')
             self.assertGreater(listener.fileno(), 0)
 
     def test_preflight_failure_does_not_persist_credentials(self):

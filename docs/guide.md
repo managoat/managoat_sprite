@@ -5,13 +5,12 @@
 ## Installation
 
 The Codex path has passed installation and real inference checks on a clean
-Sprite, including the existing chat template's HTTP/SSE client. Public release
-assets are not published yet, and Claude qualification remains pending. Once
-release assets are published,
-run inside your Sprite with an inference key already exported:
+Sprite, including the existing chat template's HTTP/SSE client. [v0.1.0](https://github.com/managoat/managoat_sprite/releases/tag/v0.1.0)
+provides preview release archives for Linux AMD64 and ARM64. Claude qualification
+remains pending. Run inside your Sprite with an inference key already exported:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/managoat/managoat_sprite/main/install.sh | sh -s -- \
+curl -fsSL https://raw.githubusercontent.com/managoat/managoat_sprite/v0.1.0/install.sh | sh -s -- \
   --runtime codex --credential-env OPENAI_API_KEY --workspace /home/sprite/project
 ```
 
