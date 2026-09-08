@@ -6,7 +6,34 @@ checksums. Publishing this prerelease does not mean the full v0.1 specification
 has passed acceptance. The source is public at
 [managoat/managoat_sprite](https://github.com/managoat/managoat_sprite).
 
-## Executed checks
+## v0.1.0 distribution verification
+
+The [release workflow](https://github.com/managoat/managoat_sprite/actions/runs/34192825292)
+passed on Linux AMD64 and ARM64 at source commit `9d4deef`. Each architecture ran
+`mix check` (27 tests), all 17 Python management/watchdog tests, and an extracted
+release runtime check. Archive versions matched tag `v0.1.0`; both downloaded
+archives matched their published SHA-256 files and contained release payloads
+without local configuration or account state.
+
+A clean x86_64 Sprite installed the draft archive successfully. After publication,
+a second clean Sprite ran the tagged public installer with no `MANAGOAT_ARCHIVE`
+override. It downloaded and verified the GitHub release, provisioned Codex, and
+started the API without manual repair. Executed checks verified unauthorized API
+rejection, authenticated readiness, ACP initialization, agent/capability discovery,
+workspace preservation, private client-key file permissions, and readiness/key
+preservation after a service restart.
+
+These fresh-install checks used a placeholder inference credential and made no
+model requests. Paid inference and continuation evidence below comes from the
+earlier development builds, not a fresh paid probe of these release archives.
+Live ARM64 Sprite installation and direct URL access remain unverified.
+
+| Archive | SHA-256 |
+|---|---|
+| `managoat-linux-amd64.tar.gz` | `d19c613be077439ec0604872df286725fb60b2a1c71eef08a1e7f906f6c0a294` |
+| `managoat-linux-arm64.tar.gz` | `34f881940eec7731147a9c745d759114c13c0067d0efb249ece38a3b919c5000` |
+
+## Earlier implementation qualification
 
 | Check | Result |
 |---|---|
@@ -59,6 +86,9 @@ for each release candidate.
 ## Remaining qualification gates
 
 The full contract remains [the specification](spec.md). In particular:
+
+- Fresh paid inference and continuation against the published archives, and
+  live ARM64 Sprite installation.
 
 - Claude real inference, permission and continuation parity. Only an OpenAI
   credential was supplied for live provider tests; Claude is implemented but
