@@ -2,6 +2,14 @@ name: CLI Release
 on:
   push:
     tags: ['cli-v*']
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing CLI tag to verify and stage
+        required: true
+        type: string
+env:
+  CLI_TAG: ${{ inputs.release_tag || github.ref_name }}
 permissions:
   contents: read
 jobs:
@@ -13,11 +21,17 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CLI_TAG }}
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - run: test "$(cat scripts/CLI_VERSION)" = "${GITHUB_REF_NAME#cli-v}"
-      - run: python3 -m unittest discover -s test -p '*_test.py' -v
+      - run: test "$(cat scripts/CLI_VERSION)" = "${CLI_TAG#cli-v}"
+      - name: Test host commands on supported Python versions
+        run: |
+          python3 -m unittest discover -s test -p 'chat_test.py' -v
+          python3 -m unittest discover -s test -p 'provision_test.py' -v
+          python3 -m unittest discover -s test -p 'cli_release_test.py' -v
       - run: sh -n install-cli.sh
       - run: python3 scripts/build-cli.py
       - name: Install the packaged CLI
@@ -25,7 +39,7 @@ jobs:
           prefix=$(mktemp -d)
           trap 'rm -rf "$prefix"' EXIT
           MANAGOAT_CLI_ARCHIVE="$PWD/dist/cli/managoat-cli.tar.gz" sh dist/cli/install-cli.sh --prefix "$prefix"
-          test "$("$prefix/bin/managoat" --version)" = "managoat CLI ${GITHUB_REF_NAME#cli-v}"
+          test "$("$prefix/bin/managoat" --version)" = "managoat CLI ${CLI_TAG#cli-v}"
           "$prefix/bin/managoat" prompt --help
           "$prefix/bin/managoat" sprite create --help
       - uses: actions/upload-artifact@v4
@@ -40,6 +54,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CLI_TAG }}
       - uses: actions/download-artifact@v4
         with:
           name: cli-release
@@ -47,4 +63,4 @@ jobs:
       - name: Stage draft CLI release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/cli/* --verify-tag --draft --prerelease --title "Managoat CLI ${GITHUB_REF_NAME#cli-v} (preview)" --notes-file docs/cli-release-notes.md
+        run: gh release create "$CLI_TAG" dist/cli/* --verify-tag --draft --prerelease --title "Managoat CLI ${CLI_TAG#cli-v} (preview)" --notes-file docs/cli-release-notes.md
