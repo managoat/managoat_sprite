@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Manasprites",
+  "version": "0.1.0",
+  "identifier": "com.managoat.manasprites",
+  "build": {
+    "beforeBuildCommand": "sh scripts/prepare-release.sh"
+  },
+  "app": {
+    "security": {"csp": null}
+  },
+  "bundle": {
+    "active": true,
+    "resources": {"target/rel": "rel"},
+    "targets": ["app"],
+    "icon": ["icons/icon.png", "icons/icon.icns"],
+    "macOS": {"minimumSystemVersion": "13.0", "entitlements": "App.entitlements", "signingIdentity": "-"}
+  }
+}

@@ -2,6 +2,10 @@
 
 [Back to Managoat Sprite](../README.md)
 
+The laptop application is a separate Mix project under `desktop/`. Its Phoenix
+tests and native macOS packaging have their own [development commands](../desktop/README.md).
+Run the root checks below as well when changing shared service/CLI behavior.
+
 For local development, install Elixir 1.19 and a compatible Erlang/OTP toolchain,
 then run:
 

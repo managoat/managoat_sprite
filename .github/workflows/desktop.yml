@@ -1,0 +1,51 @@
+name: Desktop macOS
+on:
+  pull_request:
+    paths: ['desktop/**', 'lib/**', 'scripts/provision_remote.py', 'mix.exs', 'mix.lock', '.github/workflows/desktop.yml']
+  push:
+    branches: [main]
+    paths: ['desktop/**', 'lib/**', 'scripts/provision_remote.py', 'mix.exs', 'mix.lock', '.github/workflows/desktop.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: desktop-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '28.4'
+          elixir-version: '1.19.5'
+      - name: Install pinned native build tools
+        run: |
+          rustup toolchain install 1.96.0 --profile minimal
+          rustup default 1.96.0
+          cargo install tauri-cli --version 2.11.4 --locked
+      - name: Fetch test dependencies
+        run: mix deps.get
+      - name: Test actual service, ACP and local subprocess workflows
+        run: mix check
+      - name: Build embedded release and app
+        run: tauri build --bundles app --ci
+      - name: Exercise the native fleet UI with real ACP service processes
+        run: python3 scripts/smoke-native-fleet.py
+      - name: Verify and smoke-test the delivery archive
+        run: python3 scripts/package-macos.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.runner }}
+          path: desktop/dist/*
+          if-no-files-found: error
+          retention-days: 14

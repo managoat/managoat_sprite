@@ -9,3 +9,11 @@
 
 __pycache__/
 *.pyc
+
+/desktop/_build/
+/desktop/deps/
+/desktop/src-tauri/target/
+/desktop/src-tauri/gen/
+/desktop/.state/
+/desktop/dist/
+/desktop/priv/static/assets/phoenix*.js

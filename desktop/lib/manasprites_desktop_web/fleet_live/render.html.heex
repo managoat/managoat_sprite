@@ -1,0 +1,785 @@
+<aside class="rail">
+  <a class="brand" href="/">
+    <span class="brand-mark">m</span> manasprites <span class="local">LOCAL</span>
+  </a>
+  <div class="rail-section"><span>WORKSPACE</span><span class="connection-dot"></span></div>
+  <button class={"nav #{if !@agent, do: "selected"}"} id="fleet-nav" phx-click="overview">
+    <span>▦</span> Fleet overview <span class="count">{length(@agents)}</span>
+  </button>
+  <div class="rail-section">
+    <span>YOUR SPRITES</span><button
+      phx-click="connect_form"
+      class="icon"
+      aria-label="Connect agent"
+    >+</button>
+  </div>
+  <div id="agent-rail">
+    <button
+      :for={agent <- @agents}
+      id={"agent-nav-#{agent.id}"}
+      phx-click="select_agent"
+      phx-value-id={agent.id}
+      class={"nav agent-nav #{if @selected == agent.id, do: "selected"}"}
+    >
+      <span class="agent-symbol">↗</span><span>{agent.name}<small>{agent.runtime} · {agent.status}</small></span>
+      <span :if={@approvals[agent.id]} class="approval-notice">Approval requested</span>
+      <span :if={@provider_warnings[agent.id]} class="approval-notice">
+        Review provider error
+      </span>
+    </button>
+  </div>
+  <div class="rail-bottom">
+    <p>Your laptop is the control room.<br />Your Sprites do the work.</p>
+    <button id="settings-open" phx-click="settings" class="nav">
+      ⚙ <span>Keys & settings</span>
+    </button>
+  </div>
+</aside>
+<main>
+  <header>
+    <div class="crumb">
+      <span id="workspace-name">{@name}</span><span>/</span><strong>{if @agent, do: @agent.name, else: "Fleet overview"}</strong>
+    </div>
+    <div class="header-right"><span class="connection-dot"></span> On this laptop</div>
+  </header>
+  <div :for={{kind, message} <- @flash} class="flash" role="status" id={"flash-#{kind}"}>
+    {message}
+  </div>
+
+  <section :if={@settings} class="settings-panel" id="workspace-settings">
+    <div class="dialog-heading">
+      <h2>Keys & settings</h2>
+      <button class="icon" phx-click="settings" aria-label="Close settings">×</button>
+    </div>
+    <.form for={@form} id="workspace-form" phx-submit="rename">
+      <label>
+        Workspace name<input
+          name="name"
+          id="workspace-name-input"
+          value={@name}
+          required
+          maxlength="100"
+        />
+      </label>
+      <p class="fine">Saved locally in SQLite.</p>
+      <button class="primary" type="submit" phx-disable-with="Saving…">Save workspace</button>
+    </.form>
+    <hr />
+    <p class="muted">
+      Your keys are encrypted in the local database. The encryption key stays in this laptop’s private app directory.
+    </p>
+    <div
+      :for={{provider, present} <- @providers}
+      class="credential-row"
+      id={"credential-#{provider}"}
+    >
+      <span>{String.capitalize(provider)}</span><span>{if present, do: "Saved", else: "Not configured"}</span><button
+        :if={present}
+        phx-click="remove_credential"
+        phx-value-provider={provider}
+        class="quiet"
+      >Remove key</button>
+    </div>
+    <.form for={@form} id="credential-form" phx-submit="save_credential" phx-auto-recover="ignore">
+      <label>
+        Provider<select name="provider"><option
+            :for={provider <- Vault.providers()}
+            value={provider}
+          >{String.capitalize(provider)}</option></select>
+      </label>
+      <label>
+        API key<input name="secret" type="password" autocomplete="new-password" value="" required />
+      </label>
+      <p class="fine">
+        Saved keys are never sent back to the interface. New Sprites receive only their selected inference key.
+      </p>
+      <button type="submit" class="primary" phx-disable-with="Saving…">Save key</button>
+    </.form>
+  </section>
+
+  <section :if={@connecting} class="settings-panel" id="connect-panel">
+    <div class="dialog-heading">
+      <h2>Connect an agent</h2>
+      <button class="icon" phx-click="connect_form" aria-label="Close connection form">×</button>
+    </div>
+    <p class="muted">
+      Connect a Sprite with Manasprites already installed. Private connections use your saved Sprites token and open only while requests are running.
+    </p>
+    <.form for={@form} id="connect-form" phx-submit="attach" phx-auto-recover="ignore">
+      <label>
+        Agent name<input
+          name="name"
+          value={@connection_defaults["name"]}
+          placeholder="Frontend engineer"
+          required
+          maxlength="100"
+        />
+      </label>
+      <label>
+        Organization<input
+          name="organization"
+          value={@connection_defaults["organization"]}
+          placeholder="your-sprites-org"
+          required={@connection_kind == "private"}
+        />
+      </label>
+      <label>
+        Connection<select name="transport" phx-change="connection_kind"><option
+            value="direct"
+            selected={@connection_kind == "direct"}
+          >Service URL</option><option value="private" selected={@connection_kind == "private"}>Private Sprite</option></select>
+      </label>
+      <label :if={@connection_kind == "direct"}>
+        Service URL<input
+          name="url"
+          placeholder="https://my-agent-abc.sprites.app"
+          required
+        />
+      </label>
+      <label :if={@connection_kind == "private"}>
+        Sprite name<input
+          name="sprite_name"
+          value={@connection_defaults["sprite_name"]}
+          placeholder="my-agent"
+          required
+        />
+      </label>
+      <label :if={@connection_kind == "private"}>
+        Service port<input
+          name="port"
+          type="number"
+          min="1"
+          max="65535"
+          value="8080"
+          required
+        />
+      </label>
+      <label>
+        Service bearer key<input
+          name="secret"
+          type="password"
+          autocomplete="new-password"
+          value=""
+          required
+        />
+      </label>
+      <p class="fine">
+        The service key belongs to this agent. Your organization’s Sprites token stays separate.
+      </p>
+      <button class="primary" type="submit" phx-disable-with="Connecting…">
+        Connect agent →
+      </button>
+    </.form>
+  </section>
+
+  <section :if={@platform_open} class="platform-panel" id="platform-panel">
+    <div class="dialog-heading">
+      <div>
+        <h2>Add a Sprite</h2>
+        <p class="muted">
+          Connect an existing agent or create a computer for your next project.
+        </p>
+      </div>
+      <button class="icon" phx-click="platform" aria-label="Close Sprite setup">×</button>
+    </div>
+    <p :if={!@providers["sprites"]} class="fine">
+      Save your Sprites token in Keys &amp; settings first.
+    </p>
+    <button
+      id="discover-sprites"
+      phx-click="discover_sprites"
+      disabled={!@providers["sprites"]}
+      phx-disable-with="Requesting…"
+    >
+      Discover existing Sprites
+    </button>
+    <div
+      :for={job <- Enum.take(Enum.filter(@platform_jobs, &(&1.kind == "discover")), 1)}
+      class="catalogue"
+    >
+      <p :if={job.state == "completed" and job.result["sprites"] == []}>
+        No Sprites found for this token.
+      </p>
+      <div :for={sprite <- job.result["sprites"] || []} class="catalogue-row">
+        <strong>{sprite["name"]}</strong><span>{sprite["organization"] || sprite["org_slug"]}</span>
+        <span>{sprite["status"] || "Not checked"}</span>
+        <button
+          phx-click="connect_discovered"
+          phx-value-name={sprite["name"]}
+          phx-value-organization={sprite["organization"] || sprite["org_slug"]}
+          disabled={!PlatformClient.name?(sprite["organization"] || sprite["org_slug"])}
+        >
+          Connect agent
+        </button>
+      </div>
+      <p :if={job.state == "completed"} class="fine">
+        Choose a Sprite with Manasprites installed, then enter its service bearer key. The app opens its private connection for you.
+      </p>
+    </div>
+    <.form for={@form} id="create-sprite-form" phx-submit="create_sprite">
+      <div class="setup-grid">
+        <label>
+          Sprite name<input
+            name="name"
+            placeholder="project-engineer"
+            pattern="[a-z0-9][a-z0-9-]{0,62}"
+            maxlength="63"
+            required
+          />
+        </label>
+        <label>
+          Organization<input
+            name="organization"
+            placeholder="Organization for your saved token"
+            maxlength="63"
+            required
+          />
+        </label>
+        <label>
+          Agent name<input name="display_name" placeholder="Project engineer" maxlength="100" />
+        </label>
+        <label>
+          Runtime<select name="runtime"><option value="codex">Codex · OpenAI key</option><option value="claude">Claude · Anthropic key</option></select>
+        </label>
+        <label>
+          Repository URL (optional)<input
+            type="url"
+            name="repository"
+            placeholder="https://github.com/you/project.git"
+          />
+        </label>
+        <label>Git ref<input name="ref" value="HEAD" maxlength="256" required /></label>
+        <label>
+          Model (optional)<input
+            name="model"
+            placeholder="openai/model or anthropic/model"
+            maxlength="200"
+          />
+        </label>
+        <label>
+          Tool approvals<select name="permissions"><option value="ask">Ask me</option><option value="auto_allow">Allow automatically</option><option value="auto_deny">Deny automatically</option></select>
+        </label>
+      </div>
+      <label>
+        <input type="checkbox" name="use_github" value="true" />Use my saved GitHub key for this repository
+      </label>
+      <label>
+        Agent instructions (optional)<textarea
+          name="instructions"
+          rows="3"
+          maxlength="65536"
+          placeholder="How should this agent work on your project?"
+        ></textarea>
+      </label>
+      <label>
+        Endpoint access<select name="url_auth" required><option value="sprite">Private Sprite connection</option><option value="public">Public Sprite URL, protected by the agent bearer key</option></select>
+      </label>
+      <p class="fine">
+        Creates a Sprite in your account, installs Manasprites, and connects it to this fleet. Private access keeps its platform URL protected. Sprite usage is billed to your account; setup makes no model request.
+      </p>
+      <button
+        type="submit"
+        class="primary"
+        disabled={!@providers["sprites"]}
+        phx-disable-with="Creating…"
+      >
+        Create Sprite &amp; connect agent
+      </button>
+    </.form>
+  </section>
+  <section
+    :if={@platform_jobs != [] && (!@agent || @platform_open)}
+    class="platform-operations"
+    id="platform-operations"
+  >
+    <h2>Sprite operations</h2>
+    <article :for={job <- Enum.take(@platform_jobs, 12)} id={"platform-job-#{job.id}"}>
+      <div>
+        <strong>{job.sprite_name || "Discover Sprites"}</strong><span>{job.state} · {job.stage}</span>
+      </div>
+      <p :if={job.error}>{job.error}</p>
+      <button
+        :if={job.state in ~w(failed unknown)}
+        phx-click="retry_platform"
+        phx-value-id={job.id}
+        phx-disable-with="Resuming…"
+      >
+        Review complete · resume
+      </button>
+      <button
+        :if={job.agent_id && job.state == "completed"}
+        phx-click="select_agent"
+        phx-value-id={job.agent_id}
+      >
+        Open agent
+      </button>
+    </article>
+  </section>
+  <section :if={!@agent} class="overview" id="fleet-overview">
+    <div class="page-heading">
+      <div>
+        <div class="eyebrow">A LITTLE SWITCHYARD OF YOUR OWN</div>
+        <h1>Your agents, at work.</h1>
+        <p>Give each agent a Sprite. Keep every project moving.</p>
+      </div>
+      <div class="fleet-actions">
+        <button id="connect-open" phx-click="connect_form" class="quiet">
+          Connect an agent
+        </button>
+        <button id="platform-open" phx-click="platform" class="primary">+ Add a Sprite</button>
+      </div>
+    </div>
+    <div class="fleet-summary">
+      <div><strong>{length(@agents)}</strong><span>in your fleet</span></div>
+      <div>
+        <strong>{Enum.count(@agents, &(fleet_lane(&1, @attention) == "working"))}</strong><span>working</span>
+      </div>
+      <div>
+        <strong id="attention-count">{@attention_count}</strong><span>need attention</span>
+      </div>
+      <button
+        id="refresh-fleet"
+        phx-click="refresh_fleet"
+        class="quiet"
+        phx-disable-with="Refreshing…"
+      >
+        ↻ Refresh status
+      </button>
+    </div>
+    <div :if={@agents == []} class="welcome">
+      <div class="yard-illustration" aria-hidden="true">
+        <span>01</span><span>02</span><span>03</span>
+      </div>
+      <div>
+        <div class="eyebrow">FROM FIRST PROMPT TO A FLEET</div>
+        <h2>Make room for your next idea.</h2>
+        <p>
+          Connect your first Sprite agent and give it a project.<br />Its conversations and files stay on its Sprite when you close the app.
+        </p>
+        <button id="welcome-start" phx-click="platform" class="primary">
+          Add your first Sprite →
+        </button>
+      </div>
+    </div>
+    <div :if={@agents != []} class="board" id="fleet-board">
+      <section
+        :for={
+          {label, statuses} <- [
+            {"Working", ~w(working connecting)},
+            {"Available", ~w(ready disconnected)},
+            {"Needs attention", ~w(attention)}
+          ]
+        }
+        class="board-column"
+        data-lane={label}
+      >
+        <h2>
+          <i class="lane-dot"></i>{label}<span>{Enum.count(@agents, &(fleet_lane(&1, @attention) in statuses))}</span>
+        </h2>
+        <button
+          :for={agent <- Enum.filter(@agents, &(fleet_lane(&1, @attention) in statuses))}
+          class="agent-card"
+          id={"agent-card-#{agent.id}"}
+          phx-click="select_agent"
+          phx-value-id={agent.id}
+        >
+          <div class="card-top">
+            <span class="agent-symbol">↗</span><span class="pill">{agent.status}</span>
+          </div>
+          <h3>{agent.name}</h3>
+          <p :if={@approvals[agent.id]} class="approval-notice">Approval requested</p>
+          <p :if={@provider_warnings[agent.id]} class="approval-notice">Review provider error</p>
+          <p>{agent.organization || "Your Sprite"}</p>
+          <div class="card-foot">
+            <span>{agent.runtime}</span><span>{if agent.checked_at, do: "Checked #{Calendar.strftime(agent.checked_at, "%H:%M UTC")}", else: "Not checked yet"}</span>
+          </div>
+        </button>
+        <div
+          :if={!Enum.any?(@agents, &(fleet_lane(&1, @attention) in statuses))}
+          class="empty-lane"
+        >
+          No agents here
+        </div>
+      </section>
+    </div>
+    <footer>
+      Status reflects the last check. Idle agents are not polled. Approval markers clear after this app’s answer is acknowledged or the turn finishes.
+    </footer>
+  </section>
+
+  <section :if={@agent} id="agent-view">
+    <div class="agent-heading">
+      <div>
+        <div class="eyebrow">{@agent.runtime} / {@agent.organization || "YOUR SPRITE"}</div>
+        <h1>{@agent.name}</h1>
+        <p>{@agent.url}</p>
+      </div>
+      <div class="actions">
+        <div>
+          <button id="workspace-toggle" phx-click="inspector_width">
+            {if @inspector_wide, do: "Conversation", else: "Workspace"}
+          </button>
+        </div>
+        <div class="pill">{@agent.status}</div>
+        <div>
+          <button
+            id="refresh-agent"
+            phx-click="refresh_agent"
+            phx-disable-with="Refreshing…"
+          >
+            ↻ Refresh
+          </button>
+        </div>
+        <div>
+          <button
+            id="new-conversation"
+            phx-click="new_conversation"
+            class="primary"
+          >
+            + New conversation
+          </button>
+        </div>
+        <div><button phx-click="remove_agent" class="quiet">Remove</button></div>
+      </div>
+    </div>
+    <div :if={@agent.error} class="flash" role="alert" id="agent-error">
+      {@agent.error}<details><summary>Update the service key</summary><.form
+          for={@form}
+          id="service-key-form"
+          phx-submit="update_key"
+        ><input
+            name="secret"
+            type="password"
+            value=""
+            autocomplete="new-password"
+            aria-label="New service key"
+            required
+          /><button type="submit">Save & reconnect</button></.form></details>
+    </div>
+    <div :if={@confirm_remove} class="flash" id="remove-confirmation">
+      <p>
+        Remove this connection and its local cache? The Sprite, agent service, files and remote conversations are preserved.
+      </p>
+      <button phx-click="confirm_remove" class="danger">Remove connection</button><button phx-click="cancel_remove">Cancel</button>
+    </div>
+    <div
+      :for={job <- Enum.filter(@jobs, &(&1.state == "unknown"))}
+      class="flash"
+      role="alert"
+      id={"unknown-#{job.id}"}
+    >
+      <p>{job.error} No request has been resubmitted.</p>
+      <button phx-click="refresh_agent">Refresh remote history</button><button
+        phx-click="reviewed"
+        phx-value-id={job.id}
+      >I’ve reviewed the remote work</button>
+    </div>
+    <div class={"workbench #{if @inspector_wide, do: "inspector-wide"}"}>
+      <nav class="conversations">
+        <div class="eyebrow">CONVERSATIONS</div>
+        <button
+          :for={conversation <- Fleet.conversations(@agent)}
+          id={"conversation-#{conversation["id"]}"}
+          phx-click="select_conversation"
+          phx-value-id={conversation["id"]}
+          class={"conversation #{if @conversation_id == conversation["id"], do: "active"}"}
+        >
+          {title(conversation)}<small>{conversation["status"]}</small>
+        </button>
+        <p :if={Fleet.conversations(@agent) == []} class="fine">No conversations yet.</p>
+      </nav>
+      <section class="chat">
+        <div class="chat-top">
+          <span>{selected_title(@agent, @conversation_id)}</span><button
+            :if={@busy? && @conversation_id}
+            id="interrupt"
+            class="danger"
+            phx-click="interrupt"
+            phx-disable-with="Stopping…"
+          >Stop turn</button>
+        </div>
+        <div id="transcript" aria-live="polite">
+          <button :if={@history_more?} phx-click="more_history" class="quiet">
+            Load earlier output
+          </button>
+          <div :if={@entries == []} class="chat-empty">
+            <div class="agent-symbol">↗</div>
+            <h2>What’s the next project?</h2>
+            <p>
+              Ask your agent to build, investigate, or pick up where you left off. This Sprite keeps its own workspace.
+            </p>
+          </div>
+          <article :for={entry <- @entries} id={"turn-#{entry.turn["id"]}"}>
+            <div class="message user">
+              <div class="author">YOU</div>
+              <pre>{entry.turn["prompt"]}</pre>
+            </div>
+            <div
+              :for={{block, index} <- Enum.with_index(entry.blocks)}
+              id={"block-#{entry.turn["id"]}-#{index}"}
+            >
+              <div :if={block["kind"] == "text"} class="message assistant">
+                <pre>{block["body"]}</pre>
+              </div>
+              <details :if={block["kind"] in ~w(tool_use tool_result)} class="tool">
+                <summary>{block["summary"] || block["name"] || "Tool activity"}</summary>
+                <pre>{block["body"] || ""}</pre>
+              </details>
+              <div :if={block["kind"] == "permission_request"} class="permission">
+                <strong>{block["summary"] || block["name"] || "Tool permission"}</strong>
+                <div>
+                  <button
+                    :for={option <- block["options"] || []}
+                    phx-click="permission"
+                    phx-value-request={block["request_id"]}
+                    phx-value-option={option["optionId"]}
+                    disabled={
+                      entry.turn["status"] not in ~w(pending running) || block["answered_locally"]
+                    }
+                    phx-disable-with="Sending…"
+                  >
+                    {option["name"] || option["optionId"]}
+                  </button>
+                </div>
+                <small :if={block["answered_locally"]}>Answer acknowledged</small>
+              </div>
+            </div>
+            <div :if={entry.turn["desktop_warning"]} class="flash provider-warning" role="alert">
+              {entry.turn["desktop_warning"]}
+            </div>
+            <div class="stage">
+              Turn {entry.turn["turn_number"]} · {if entry.turn["desktop_warning"],
+                do: "Review provider error (service: #{entry.turn["status"]})",
+                else: entry.turn["status"]}<span :if={entry.turn["failure_reason"]}> · {entry.turn["failure_reason"]}</span>
+            </div>
+          </article>
+        </div>
+        <.form for={@form} id="composer" phx-submit="prompt">
+          <textarea
+            id="prompt"
+            name="prompt"
+            rows="3"
+            aria-label="Message your agent"
+            placeholder="What should this agent work on?"
+            required
+          ></textarea>
+          <div class="composer-bottom">
+            <div id="composer-hint">
+              {cond do
+                @pending? -> "Waiting for the submitted request."
+                @busy? -> "This Sprite is working. Other Sprites can work in parallel."
+                true -> "Files stay on this Sprite."
+              end}
+            </div>
+            <button
+              type="submit"
+              class="primary"
+              id="send"
+              disabled={@pending? || @busy? || @agent.runtime == "unverified"}
+              phx-disable-with="Sending…"
+            >
+              Send ↑
+            </button>
+          </div>
+        </.form>
+      </section>
+      <aside class="inspector" id="workspace-inspector">
+        <div class="inspector-tabs">
+          <button
+            :for={
+              {tab, label} <- [
+                {"files", "Files"},
+                {"changes", "Changes"},
+                {"requests", "Requests"}
+              ]
+            }
+            id={"inspector-tab-#{tab}"}
+            phx-click="inspector_tab"
+            phx-value-tab={tab}
+            class={if @inspector_tab == tab, do: "selected"}
+          >
+            {label}
+          </button>
+        </div>
+        <div id="inspector-content">
+          <div :if={@inspector_tab == "requests"}>
+            <p class="fine">
+              Requests belong to the app, so switching conversations does not stop them.
+            </p>
+            <div :for={job <- @jobs} class="job-row" id={"job-#{job.id}"}>
+              <span>{job.kind}</span><span class="pill">{job.state}</span>
+              <p :if={job.error}>{job.error}</p>
+            </div>
+          </div>
+          <div :if={@inspector_tab != "requests"}>
+            <details id="workspace-link" open={!@agent.sprite_name}>
+              <summary>
+                {if @agent.sprite_name, do: "Change Sprite link", else: "Link workspace"}
+              </summary>
+
+              <div>
+                <.form
+                  for={@form}
+                  id="link-workspace-form"
+                  phx-submit="link_workspace"
+                >
+                  <p class="fine">
+                    Link this service to its Sprite to browse project files using your saved Sprites token.
+                  </p>
+                  <label>
+                    Sprite name<input
+                      name="sprite_name"
+                      value={@agent.sprite_name}
+                      required
+                      maxlength="63"
+                    />
+                  </label>
+                  <label>
+                    Organization<input
+                      name="organization"
+                      value={@agent.organization}
+                      required
+                      maxlength="63"
+                    />
+                  </label>
+                  <button type="submit" phx-disable-with="Verifying…">Link workspace</button>
+                </.form>
+              </div>
+            </details>
+            <div :if={@agent.sprite_name} class="inspection-toolbar">
+              <button
+                id="refresh-inspector"
+                phx-click="refresh_inspector"
+                disabled={@inspection && @inspection.state in ~w(queued running)}
+                phx-disable-with="Reading…"
+              >
+                ↻ Refresh
+              </button>
+              <button phx-click="inspect_workspace" phx-value-action="list" phx-value-path="">
+                Project root
+              </button>
+            </div>
+            <p :if={@agent.workspace} class="file-path">{@agent.workspace}</p>
+            <p :if={!@inspection} class="fine">
+              Refresh to read this view. The inspector does not poll idle Sprites.
+            </p>
+            <div :if={@inspection} id="inspection-result">
+              <p :if={@inspection.state in ~w(queued running)} role="status">
+                Reading workspace…
+              </p>
+              <p :if={@inspection.error} role="alert">{@inspection.error}</p>
+              <div :if={@inspection.state == "completed"}>
+                <p class="fine">
+                  Cached {Calendar.strftime(@inspection.updated_at, "%H:%M:%S UTC")} · read only
+                </p>
+                <p :if={@inspection.result["truncated"]} class="inspection-limit">
+                  Showing a bounded preview. Open a smaller file or directory for more detail.
+                </p>
+                <div :if={@inspection.result["action"] in ~w(link list)} id="workspace-files">
+                  <button
+                    :if={@inspector_path != ""}
+                    class="file-row"
+                    phx-click="inspect_workspace"
+                    phx-value-action="list"
+                    phx-value-path={parent_path(@inspector_path)}
+                  >
+                    ← Parent directory
+                  </button>
+                  <p :if={@inspector_path != ""} class="file-path">{@inspector_path}</p>
+                  <button
+                    :for={entry <- @inspection.result["entries"] || []}
+                    class="file-row"
+                    phx-click="inspect_workspace"
+                    phx-value-action={if entry["kind"] == "directory", do: "list", else: "file"}
+                    phx-value-path={entry["path"]}
+                    disabled={entry["kind"] == "unavailable"}
+                  >
+                    {if entry["kind"] == "directory", do: "▸ ", else: "· "}{entry["name"]}
+                  </button>
+                  <p :if={@inspection.result["entries"] == []} class="fine">
+                    This directory is empty.
+                  </p>
+                </div>
+                <div :if={@inspection.result["action"] == "file"} id="workspace-file">
+                  <button
+                    phx-click="inspect_workspace"
+                    phx-value-action="list"
+                    phx-value-path={parent_path(@inspector_path)}
+                  >
+                    ← Directory
+                  </button>
+                  <p class="file-path">{@inspector_path} · {@inspection.result["size"]} bytes</p>
+                  <p :if={@inspection.result["binary"]} class="fine">
+                    Binary file · text preview unavailable.
+                  </p>
+                  <pre :if={!@inspection.result["binary"]}>{@inspection.result["text"]}</pre>
+                </div>
+                <div :if={@inspection.result["action"] == "status"} id="workspace-changes">
+                  <p :if={!@inspection.result["repository"]} class="fine">
+                    This workspace is not a Git repository.
+                  </p>
+                  <div :if={@inspection.result["repository"]}>
+                    <strong>{@inspection.result["branch"]}</strong>
+                    <div class="inspection-toolbar">
+                      <div>
+                        <button
+                          phx-click="inspect_workspace"
+                          phx-value-action="diff"
+                          phx-value-path=""
+                        >
+                          Unstaged diff
+                        </button>
+                      </div>
+                      <div>
+                        <button
+                          phx-click="inspect_workspace"
+                          phx-value-action="diff"
+                          phx-value-path=""
+                          phx-value-staged="true"
+                        >
+                          Staged diff
+                        </button>
+                      </div>
+                    </div>
+                    <p :if={@inspection.result["changes"] == []} class="fine">
+                      Working tree clean.
+                    </p>
+                    <div :for={change <- @inspection.result["changes"] || []} class="change-row">
+                      <code>{change["status"]}</code><span>{change["path"]}</span>
+                      <button
+                        phx-click="inspect_workspace"
+                        phx-value-action={if change["status"] == "??", do: "file", else: "diff"}
+                        phx-value-path={String.trim_trailing(change["path"], "/")}
+                        phx-value-staged={
+                          if String.first(change["status"]) not in [" ", "?"],
+                            do: "true",
+                            else: "false"
+                        }
+                      >
+                        View
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div :if={@inspection.result["action"] == "diff"} id="workspace-diff">
+                  <p class="file-path">
+                    {if @inspection.result["staged"], do: "Staged", else: "Unstaged"} · {if @inspector_path ==
+                                                                                              "",
+                                                                                            do:
+                                                                                              "tracked changes",
+                                                                                            else:
+                                                                                              @inspector_path}
+                  </p>
+                  <pre>{@inspection.result["text"] || ""}</pre>
+                  <p :if={@inspection.result["text"] == ""} class="fine">
+                    No changes in this selection.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+</main>

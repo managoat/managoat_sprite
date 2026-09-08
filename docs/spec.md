@@ -2,6 +2,11 @@
 
 Status: implementation target; see acceptance.md for current verification. Written 2026-09-07.
 
+The laptop fleet application is specified separately in [desktop.md](desktop.md).
+Its local Phoenix LiveView UI, OTP supervisors and Ecto/SQLite state extend the
+host product; they do not change this document's single-Sprite service contract.
+The web UI/fleet deferrals below apply to the service's original release scope.
+
 ## Product contract
 
 Provision a Sprite, run one installation command inside it, and that computer now serves Managoat's conversations API. The installer supplies the application and its runtime dependencies, configures one agent, registers a persistent HTTP service, and verifies readiness. The operator supplies inference credentials and chooses the workspace. No Fountain account, external database, Elixir toolchain, or Managoat control plane is required.

@@ -2,6 +2,13 @@
 
 A persistent coding agent you can talk to from your terminal or over HTTP.
 
+A local **Elixir + Phoenix LiveView desktop app** is also in development in
+[`desktop/`](desktop/README.md). The macOS package now connects existing agents,
+stores credentials locally, and runs conversations through supervised OTP jobs.
+Live checks cover private Sprite creation, Codex work and continuation, interruption,
+and file/Git inspection; remaining qualification is tracked in the
+[desktop plan and verification record](docs/desktop.md).
+
 ```sh
 manasprites sprite create --file agent.json
 manasprites prompt "Build a Python reading-list CLI. Save to JSON. Write and run tests."
@@ -70,7 +77,8 @@ app. See the [CLI and HTTP walkthroughs](docs/conversations.md).
 
 The service is a [v0.1.0 preview](https://github.com/managoat/manasprites/releases/tag/v0.1.0);
 the [CLI preview](https://github.com/managoat/manasprites/releases/tag/cli-v0.2.0) installs separately. Codex has live inference and continuation
-coverage; Claude still needs live qualification. There is no bundled web UI.
+coverage; Claude still needs live qualification. Published service/CLI previews
+do not bundle the new desktop UI.
 
 Setup makes no model request; prompts use your inference account. The generated
 bearer key grants owner access, and tool permissions default to `auto_allow`.

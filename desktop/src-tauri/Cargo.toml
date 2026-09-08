@@ -1,0 +1,13 @@
+[package]
+name = "manasprites"
+version = "0.1.0"
+description = "Your local Sprite fleet workspace"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde_json = "1"
+elixirkit = { path = "../deps/elixirkit/elixirkit_rs" }
