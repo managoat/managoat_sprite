@@ -1,5 +1,28 @@
 # Acceptance record
 
+## Service 0.1.1 approval-routing patch
+
+The [0.1.1 preview](https://github.com/managoat/manasprites/releases/tag/v0.1.1)
+selects the pinned Codex adapter's human-review mode so offered tool requests
+reach the service's ask/allow/deny policy. Both Linux build jobs passed 31 service
+tests and all 48 installer/CLI tests. The exact AMD64 archive passed fresh
+installation, API authentication, paid Codex work and a desktop allow-once round
+trip without a reviewer override. An upgrade from 0.1.0 preserved the service
+key, workspace and conversation IDs; a follow-up recalled the earlier task
+without reading files or invoking tools.
+
+After publication, the rebuilt desktop created another fresh agent through the
+public 0.1.1 installer. A real reject-once answer left the requested file absent
+and cleared its attention marker. See the [desktop audit](desktop-acceptance.md)
+for the workflow scope and remaining distribution/provider gates. These checks
+do not establish Claude inference parity or the broader fault matrix below.
+
+| Archive | SHA-256 |
+| --- | --- |
+| `managoat-linux-amd64.tar.gz` | `70d1f020074812524cc8f44b84ad028c1c14e81ccbc45bec206fcade0e012781` |
+| `managoat-linux-arm64.tar.gz` | `22b18e03fb59da0a0aba34e7ee4d12cfd2ec46d984773d0d3c162d1434410eea` |
+
+
 Updated 2026-09-08. [v0.1.0](https://github.com/managoat/manasprites/releases/tag/v0.1.0)
 is the initial preview distribution, with Linux AMD64 and ARM64 archives and
 checksums. Publishing this prerelease does not mean the full v0.1 specification

@@ -31,7 +31,8 @@ Screenshots show the running native macOS app with synthetic demo agents.
 
 ## Try the macOS preview
 
-The app currently needs to be built from source. Follow the
+The preview requires **macOS 15 or later** and currently needs to be built from
+source. Follow the
 [macOS build instructions](desktop/README.md#build-and-test-on-macos) to build
 and open `Manasprites.app`. A signed, notarized desktop download is still pending.
 
@@ -48,13 +49,12 @@ on Sprites. See the [desktop guide](desktop/README.md) for setup and usage detai
 
 ## Preview status
 
-The native app and macOS packaging work locally on Apple Silicon. Live Codex
+Native macOS builds and workflow checks have passed on Apple Silicon and Intel. Live Codex
 checks cover public/private creation, coding tasks, follow-ups, interruption,
 cold wake, file/Git inspection, and overlapping work on two agents. Live approval
-answering passed with an explicitly configured agent.
+answering passed on a fresh service installation.
 
-The approval-routing fix still needs to ship in the service used for new agents.
-Funded Claude inference, Intel qualification, and desktop distribution also remain open. The
+Funded Claude inference and desktop distribution remain open. The
 [acceptance record](docs/desktop-acceptance.md) separates verified behavior from
 remaining work.
 

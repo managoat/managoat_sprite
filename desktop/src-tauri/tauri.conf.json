@@ -14,6 +14,6 @@
     "resources": {"target/rel": "rel"},
     "targets": ["app"],
     "icon": ["icons/icon.png", "icons/icon.icns"],
-    "macOS": {"minimumSystemVersion": "13.0", "entitlements": "App.entitlements", "signingIdentity": "-"}
+    "macOS": {"minimumSystemVersion": "15.0", "entitlements": "App.entitlements", "signingIdentity": "-"}
   }
 }

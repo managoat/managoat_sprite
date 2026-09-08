@@ -25,6 +25,29 @@ def run(*args):
     return subprocess.check_output(args, text=True, stderr=subprocess.STDOUT).strip()
 
 
+def os_version(value):
+    assert isinstance(value, str) and re.fullmatch(r'\d+\.\d+(?:\.\d+)?', value), 'Invalid macOS minimum version'
+    return tuple(int(part) for part in value.split('.')) + (0,) * (3 - len(value.split('.')))
+
+
+def minimum_macos(path, architecture):
+    commands = run('/usr/bin/otool', '-arch', architecture, '-l', str(path)).split('Load command ')
+    versions = []
+    for command in commands:
+        if re.search(r'\bcmd LC_BUILD_VERSION\b', command):
+            platform = re.search(r'^\s*platform\s+(\S+)', command, re.MULTILINE)
+            assert platform and platform[1].lower() in ('1', 'macos'), 'Embedded binary targets another Apple platform'
+            version = re.search(r'^\s*minos\s+(\S+)', command, re.MULTILINE)
+        elif re.search(r'\bcmd LC_VERSION_MIN_MACOSX\b', command):
+            version = re.search(r'^\s*version\s+(\S+)', command, re.MULTILINE)
+        else:
+            continue
+        assert version, 'Missing native minimum macOS version'
+        versions.append(os_version(version[1]))
+    assert versions, 'Native binary has no minimum macOS metadata'
+    return max(versions)
+
+
 def verify(app, require_notarized=False):
     app = app.resolve(strict=True)
     run('/usr/bin/codesign', '--verify', '--deep', '--strict', str(app))
@@ -43,6 +66,8 @@ def verify(app, require_notarized=False):
     architectures = run('/usr/bin/lipo', '-archs', str(native)).split()
     assert len(architectures) == 1 and architectures[0] in ('arm64', 'x86_64'), 'Build each architecture natively'
     arch = architectures[0]
+    minimum = info.get('LSMinimumSystemVersion')
+    declared_minimum = os_version(minimum)
     release = app / 'Contents/Resources/rel'
     assert (release / 'releases/COOKIE').read_text().strip() == 'unused', 'Release contains an active distribution cookie'
     assert not list((release / 'lib').glob('managoat_sprite-*')), 'Test service must not ship in desktop release'
@@ -62,6 +87,7 @@ def verify(app, require_notarized=False):
         if magic not in MACHO:
             continue
         assert arch in run('/usr/bin/lipo', '-archs', str(path)).split(), 'Embedded binary architecture mismatch'
+        assert minimum_macos(path, arch) <= declared_minimum, f'{relative} requires a newer macOS version than the app declares'
         for line in run('/usr/bin/otool', '-L', str(path)).splitlines()[1:]:
             dependency = line.strip().split(' (', 1)[0]
             assert dependency.startswith(('/usr/lib/', '/System/Library/', '@')), 'External native dependency remains'
@@ -70,7 +96,7 @@ def verify(app, require_notarized=False):
                 assert app in target.parents, 'Native dependency escapes bundle'
         binaries.append(str(relative))
     assert any('beam.smp' in path for path in binaries), 'Embedded ERTS is missing'
-    return {'version': version, 'architecture': arch, 'native_binaries': len(binaries)}
+    return {'version': version, 'architecture': arch, 'minimum_macos': minimum, 'native_binaries': len(binaries)}
 
 
 def package(app, destination, require_notarized=False):

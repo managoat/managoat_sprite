@@ -7,13 +7,17 @@ The service now selects the adapter's human-review mode for both new and
 continued conversations; ordinary workspace writes remain available. HTTP and
 CLI contracts, persisted conversations and database schema are unchanged.
 
-Local verification: 31 service tests, 24 desktop tests, and 48 installer/CLI
-tests with the Linux-only watchdog test skipped on macOS. The suites use the
-real ACP ScriptedAgent and local subprocesses. A live disposable Codex agent
-configured with the same mode received an approval through the desktop,
-accepted an allow-once answer, completed the tool, and cleared its attention
-marker. Fresh installation of these exact release archives is a separate
-qualification gate before publication.
+Verification: both Linux architecture jobs passed 31 service tests and all 48
+installer/CLI tests. The desktop suite passes 24 tests with real ACP agents and
+subprocesses. The exact AMD64 draft archive was checksum-verified and installed
+on a fresh disposable Sprite. Authenticated readiness, unauthenticated refusal,
+paid Codex inference, and an actual desktop allow-once approval round trip passed
+with the new default and no environment override.
+
+An existing disposable 0.1.0 installation also upgraded to this archive while
+preserving its service key, workspace and conversations. A subsequent paid turn
+recalled its pre-upgrade task from the same conversation without reading files
+or calling tools.
 
 This release supplies Linux AMD64 and ARM64 archives with bundled Erlang/OTP
 and SHA-256 checksums. It is the remote service used by Manasprites; it does

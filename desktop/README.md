@@ -45,8 +45,8 @@ screenshots use synthetic demo data from the native workflow test.
 - macOS native-library relocation and ad-hoc signing during packaging.
 
 Private relays, Codex file work and continuation, interruption, and file/Git
-inspection passed live checks using the packaged backend. Two real Codex agents completed overlapping file work. Live approval answering passed
-with explicit human-review mode; delivery of that service default and distribution checks remain open. Existing agents can be connected using their installed service bearer key
+inspection passed live checks using the packaged backend. Two real Codex agents completed overlapping file work. Live approval answering also passed on a fresh service 0.1.1 installation.
+Distribution checks remain open. Existing agents can be connected using their installed service bearer key
 and either a service URL or a Sprite name and organization.
 See the [product plan and verification record](../docs/desktop.md).
 
@@ -57,12 +57,10 @@ Choose **Add a Sprite**, enter the organization matching that token, choose Code
 or Claude, and optionally supply an HTTPS repository, Git ref and instructions.
 The saved GitHub key is used only when explicitly selected for the clone.
 
-Creation currently installs service `0.1.0` at `/home/sprite/project`, port 8080.
-That release's Codex adapter defaults to automatic approval review. The service
-source now selects human review so offered requests reach the configured
-ask/allow/deny policy, but this fix still needs a published service release and
-an updated provisioning pin. The live approval check used an explicitly
-configured disposable agent.
+Creation installs service [0.1.1](https://github.com/managoat/manasprites/releases/tag/v0.1.1)
+at `/home/sprite/project`, port 8080. Codex uses human approval review so offered
+requests reach the service's configured ask/allow/deny policy. A fresh 0.1.1
+installation passed the live approval round trip without an environment override.
 Private access is the default: the app opens an authenticated platform relay for
 each request and closes it afterward. Public URL access is also available; the
 agent API still requires its generated bearer key. The Sprite remains private
@@ -127,9 +125,12 @@ reuse them without waking the Sprite.
 
 ## Build and test on macOS
 
+The app requires macOS 15 or later, matching the embedded runtime.
+
 Verified build tools: Elixir 1.19.5 / OTP 28.4, Rust/Cargo 1.96.0, Tauri CLI 2.11.4, Python 3 (packaging
 scripts only), and the Xcode command-line tools. The installed app embeds ERTS;
-it does not need these tools or Python to run.
+it does not need these tools or Python to run. Install the Cargo CLI with
+`cargo install tauri-cli --version 2.11.4 --locked` before using the commands below.
 
 ```sh
 cd desktop
@@ -167,8 +168,8 @@ after both termination and SIGKILL of the native host. It uses a temporary data
 directory and synthetic workspace name, with no Sprite or model requests.
 
 `package-macos.py` creates a ZIP, SHA-256 checksum and small verification report
-under `desktop/dist/`. It verifies code signatures, embedded architectures and
-native-library references, rejects known local state files and escaping symlinks,
+under `desktop/dist/`. It verifies code signatures, embedded architectures,
+minimum macOS versions and native-library references, rejects known local state files and escaping symlinks,
 extracts the ZIP, and runs the native smoke test on that extracted app before
 making the archive available. It also executes the embedded release launcher and
 checks that Erlang distribution stays disabled. The report contains build
@@ -177,9 +178,10 @@ metadata, not account state or transcripts. This command does not publish files.
 The [desktop CI workflow](../.github/workflows/desktop.yml) builds on separate
 Apple Silicon and Intel macOS 15 runners, runs the integration checks and archive
 smoke test, and uploads only verified ZIP/checksum/report files as temporary CI
-artifacts. It requires no Sprites, inference or signing credentials. The hosted ARM job passed all 24 desktop tests and exposed a CLI invocation
-error, now corrected to `cargo tauri`. Final hosted packaging and Intel qualification
-remain pending.
+artifacts. It requires no Sprites, inference or signing credentials. The corrected hosted Apple Silicon and Intel jobs passed all 24 desktop tests,
+native fleet controls and extracted-archive checks. The downloaded Apple Silicon
+app also passed native launch and lifecycle checks locally. See the
+[acceptance record](../docs/desktop-acceptance.md) for source revisions.
 
 `mix check` additionally runs the real Sprite HTTP service and ACP ScriptedAgent
 to verify prompts, session continuation, LiveView permission answers,
@@ -205,8 +207,8 @@ Approval markers use cached requests and this app's acknowledged answers. The
 current service does not expose another client's resolution during an active
 turn, so that marker may remain until the turn finishes.
 
-Ad-hoc signing is for local builds. Developer ID signing/notarization and testing
-on a clean second Mac are separate distribution gates; this is not a published
+Ad-hoc signing is for local builds. Developer ID signing/notarization remains a separate distribution gate;
+hosted Apple Silicon and cross-machine launch checks pass, but this is not a published
 desktop release. The initial packaging target is Apple Silicon macOS.
 The embedded launcher disables Erlang distribution and crash dumps regardless of
 inherited release settings; its distribution cookie is an unused fixed marker.

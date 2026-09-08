@@ -50,7 +50,8 @@ The embedded release also needs its OpenSSL library bundled. Packaging follows
 Mach-O dependencies, copies non-system libraries, rewrites install names, fixes
 precompiled SQLite's builder-path library ID, signs nested code and then signs
 the app. Native libraries and ERTS are part of the deliverable, not prerequisites
-on the user's machine. Python is used only by build/test scripts.
+on the user's machine. The app requires macOS 15, matching the embedded runtime;
+archive verification rejects binaries requiring a newer OS than the app declares. Python is used only by build/test scripts.
 
 ## Delivery gates
 
@@ -97,7 +98,7 @@ implemented. Prompts, job payloads and cached events are ordinary SQLite data in
 that private directory. The native host suppresses runtime console output and
 BEAM crash dumps. Credentials and local state are excluded from the app bundle.
 
-The desktop suite passes twenty-three tests. It starts the actual Sprite HTTP service
+The desktop suite passes twenty-four tests. It starts the actual Sprite HTTP service
 and real ACP ScriptedAgent to exercise conversation creation, continuation,
 permission answers through LiveView, interruption and authentication repair.
 A test holds the HTTP acknowledgement after the actual service accepts a prompt,
@@ -244,14 +245,17 @@ The separate `.github/workflows/desktop.yml` workflow specifies Apple Silicon
 It pins the tested Elixir/OTP, Rust and Tauri CLI versions, runs the desktop
 integration suite, builds the app, and archives only after extracted native
 verification. It uploads short-lived CI artifacts and does not publish a release.
-`actionlint` passes locally. Hosted workflow execution and the Intel result remain
-unverified until this workflow runs in GitHub Actions.
+`actionlint` passes locally. Hosted Apple Silicon and Intel jobs passed integration tests, native fleet
+controls and extracted-archive checks after correcting the Cargo CLI invocation.
+The downloaded ARM build also passed native lifecycle tests on the development
+Mac. See the acceptance audit and PR checks for source revisions.
 
-This proves the local Apple Silicon packaging gate on this Mac. A clean second
-Mac, Intel builds, Developer ID signing/notarization and published artifacts are
-still unverified. Live private provisioning, Codex work and continuation,
-interruption, and file/Git inspection passed; live approval handling and other
-remaining checks are recorded in the acceptance audit. Initial desktop creation
+This proves local and hosted Apple Silicon/Intel packaging, including a
+separate Mac runner and cross-machine archive launch. Developer ID
+signing/notarization and published desktop artifacts remain unverified. Live public/private provisioning, Codex work and continuation, interruption,
+file/Git inspection, concurrent work on two agents, and approval answering have
+passed. The approval check exposed an adapter reviewer default; the service
+patch release and other remaining checks are recorded in the acceptance audit. Initial desktop creation
 supports a fixed workspace and service version, optional repository/ref, runtime,
 model, instructions and approval policy; it does not yet expose arbitrary
 bootstrap commands or environment imports. Existing services retain their own
