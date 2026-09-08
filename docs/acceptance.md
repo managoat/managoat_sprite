@@ -8,7 +8,7 @@ has passed acceptance. The source is public at
 
 ## Manasprites CLI rename
 
-CLI `0.2.0` uses the `manasprites` executable and `manasprites.tar.gz` archive.
+[CLI `0.2.0`](https://github.com/managoat/managoat_sprite/releases/tag/cli-v0.2.0) uses the `manasprites` executable and `manasprites.tar.gz` archive.
 Its host entry point is separate from the Sprite service's operator command.
 New host state lives under `~/.local/share/manasprites`, with `MANASPRITES_ROOT`
 as the override. This is a clean rename, with no command alias or Sprite migration.
@@ -17,6 +17,16 @@ Local checks exercise the renamed installed package against the real HTTP servic
 and ACP ScriptedAgent, including prompt, continuation, list, and watch. Installer
 checks verify that a fresh installation creates only `manasprites` and that an
 existing unrelated `managoat` executable still runs unchanged after installation.
+The [release workflow](https://github.com/managoat/managoat_sprite/actions/runs/34201336513)
+passed 31 host tests on macOS and Linux with Python 3.9 and 3.13.
+[Full CI](https://github.com/managoat/managoat_sprite/actions/runs/34201336541)
+passed all 30 Elixir tests, 48 Python tests on Linux, and the service build.
+The downloaded release archive matched the local reproducible build. After
+publication, the public installer downloaded and installed `manasprites 0.2.0`
+in a fresh macOS directory; version and command help passed, and no `managoat`
+launcher was created. No Sprite or inference request was needed for this check.
+
+Archive SHA-256: `dd6a081b248f15ea87bfc6ff0ce3cdfd1a9637a277ad37754f4c5aa03d46935e`.
 Historical verification for the earlier CLI name follows below.
 
 ## CLI distribution
