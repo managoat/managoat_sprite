@@ -45,7 +45,7 @@ defmodule ManaspritesDesktop.ProvisionConfig do
            "name" => name,
            "org" => org,
            "url_auth" => attrs["url_auth"],
-           "release" => "0.1.1",
+           "release" => "0.1.2",
            "workspace" => "/home/sprite/project",
            "port" => 8080,
            "repository" =>

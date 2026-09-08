@@ -26,6 +26,12 @@ the laptop app closed, owner approvals after reopening, external SSE completion,
 and same-context follow-up after a service restart. Test resources and temporary
 credentials were removed.
 
+The release workflow passed 41 service tests and all 48 lifecycle tests on both
+Linux AMD64 and ARM64, and executed each packaged runtime. Both archives were
+checksum-verified. The exact AMD64 release archive also passed fresh and repeated
+installation on a disposable Sprite, including authenticated ACP readiness,
+anonymous API refusal, A2A disablement by default, and key/workspace preservation.
+
 Fresh installs can select this release explicitly:
 
 ```sh

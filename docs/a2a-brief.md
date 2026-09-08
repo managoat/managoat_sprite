@@ -1,6 +1,6 @@
 # A2A access to Sprite agents
 
-Handoff brief, 2026-09-08. **Implemented and live-qualified; release publication pending.**
+Handoff brief, 2026-09-08. **Implemented, live-qualified and released as v0.1.2 preview.**
 
 See [a2a.md](a2a.md) for the concrete wire/configuration contract and the
 implementation record below for verified behavior and remaining work.
@@ -154,7 +154,7 @@ payloads or assume existing REST SSE is already A2A-compatible.
 
 ## Implementation and qualification record
 
-Implemented in the 0.1.2 source candidate:
+Implemented in service 0.1.2:
 
 - A2A 1.0 JSON-RPC operations, sanitized anonymous card, opt-in configuration,
   authenticated capabilities, strict text input, version negotiation and errors.
@@ -199,7 +199,27 @@ credentials, transcripts and the isolated desktop profile were removed; existing
 user credentials were preserved. No account details or live endpoints are stored
 in this qualification record.
 
-Remaining: publish release artifacts through the existing AMD64/ARM64 workflow,
-then advance the installer default and desktop provisioning pin. The published
-pin remains 0.1.1; this source candidate is not yet available through the default
-installer. Native Sprite qualification does not establish ARM64 live behavior.
+The [v0.1.2 preview](https://github.com/managoat/manasprites/releases/tag/v0.1.2)
+publishes AMD64 and ARM64 archives and SHA-256 checksums through the existing
+release workflow. The installer default and desktop provisioning pin are 0.1.2;
+A2A still requires explicit opt-in configuration.
+
+The [release workflow](https://github.com/managoat/manasprites/actions/runs/34291269468)
+passed 41 service tests and 48 lifecycle tests on each Linux architecture and
+executed each bundled runtime. Both downloaded archives matched their published
+checksums and contained VERSION 0.1.2. The exact AMD64 archive was installed and
+installed again on a fresh disposable Sprite: authenticated ACP readiness,
+anonymous API refusal, initial A2A disablement, and key/workspace preservation
+passed. This packaging check is separate from the paid source qualification above.
+After publication, the updated versionless installer downloaded the public release,
+verified its checksum and executed its bundled runtime. The release-verification
+Sprite and its temporary credentials were then removed.
+
+Release archive SHA-256:
+
+- AMD64: `94a6cd654a77d05b09febf58cbcc44c87b781714c7de55647342f1ec7944e74b`
+- ARM64: `c462e3b92967232815ee4e7a8e6458ce484681ef4f002805291ada864a9e25f6`
+
+Remaining: live ARM64 qualification, Claude inference parity and scoped peer
+delegation. Native AMD64 Sprite qualification does not establish ARM64 live
+behavior. Signed desktop distribution remains separate from this service release.

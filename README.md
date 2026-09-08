@@ -54,12 +54,12 @@ checks cover public/private creation, coding tasks, follow-ups, interruption,
 cold wake, file/Git inspection, and overlapping work on two agents. Live approval
 answering passed on a fresh service installation.
 
-The source candidate also supports opt-in A2A access: trusted agents can discover
+Service 0.1.2 supports opt-in A2A access: trusted agents can discover
 an agent card, submit tasks, stream results and follow up while the laptop is
 closed. Live Codex qualification includes owner approval after reopening and
 conversation continuity across a service restart. See the [A2A guide](docs/a2a.md)
-for configuration and access requirements. Release publication is pending;
-the default installer still selects service 0.1.1 without A2A.
+for configuration and access requirements. The installer and desktop provisioning
+default to this [published preview release](https://github.com/managoat/manasprites/releases/tag/v0.1.2).
 
 Funded Claude inference and desktop distribution remain open. The
 [acceptance record](docs/desktop-acceptance.md) separates verified behavior from

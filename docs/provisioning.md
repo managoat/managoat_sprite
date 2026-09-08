@@ -209,8 +209,8 @@ values; supply those again when restoring.
 
 ## A2A access after provisioning
 
-The 0.1.2 source candidate adds opt-in A2A to the installed service. Provisioning
-continues to use its pinned published release and existing URL-auth defaults.
+Service 0.1.2 adds opt-in A2A to the installed service. Desktop provisioning
+pins this published release and preserves existing URL-auth defaults.
 After installing an A2A-capable release, verify the platform-returned HTTPS
 origin against the installed service and apply the complete service configuration
 with managoat configure --file PATH, including the a2a object documented in

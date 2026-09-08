@@ -353,7 +353,7 @@ Local code inspected for this proposal:
 
 This specification makes no claim that the proposed installer, server, local adapter, or recovery behavior already exists. Existing library and platform behavior is cited separately from the proposed host application.
 
-## A2A 1.0 adapter (0.1.2 source candidate)
+## A2A 1.0 adapter (0.1.2 preview)
 
 The service now implements an opt-in A2A JSON-RPC adapter inside the existing
 engine. A2A contexts map to conversations and tasks to individual turns; the
