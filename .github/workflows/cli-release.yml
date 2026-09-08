@@ -38,10 +38,10 @@ jobs:
         run: |
           prefix=$(mktemp -d)
           trap 'rm -rf "$prefix"' EXIT
-          MANAGOAT_CLI_ARCHIVE="$PWD/dist/cli/managoat-cli.tar.gz" sh dist/cli/install-cli.sh --prefix "$prefix"
-          test "$("$prefix/bin/managoat" --version)" = "managoat CLI ${CLI_TAG#cli-v}"
-          "$prefix/bin/managoat" prompt --help
-          "$prefix/bin/managoat" sprite create --help
+          MANASPRITES_ARCHIVE="$PWD/dist/cli/manasprites.tar.gz" sh dist/cli/install-cli.sh --prefix "$prefix"
+          test "$("$prefix/bin/manasprites" --version)" = "manasprites ${CLI_TAG#cli-v}"
+          "$prefix/bin/manasprites" prompt --help
+          "$prefix/bin/manasprites" sprite create --help
       - uses: actions/upload-artifact@v4
         if: matrix.runner == 'ubuntu-24.04' && matrix.python == '3.13'
         with:
@@ -63,4 +63,4 @@ jobs:
       - name: Stage draft CLI release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$CLI_TAG" dist/cli/* --verify-tag --draft --prerelease --title "Managoat CLI ${CLI_TAG#cli-v} (preview)" --notes-file docs/cli-release-notes.md
+        run: gh release create "$CLI_TAG" dist/cli/* --verify-tag --draft --prerelease --title "Manasprites ${CLI_TAG#cli-v} (preview)" --notes-file docs/cli-release-notes.md

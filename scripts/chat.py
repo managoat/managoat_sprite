@@ -22,7 +22,7 @@ class Client:
             connection = json.loads((self.location / 'connection.json').read_text())
             self.key = (self.location / 'client.key').read_text().strip()
         except (OSError, ValueError):
-            fail('connection_missing', 'run managoat sprite create with this config first')
+            fail('connection_missing', 'run manasprites sprite create with this config first')
         if state.get('config_hash') != fingerprint(config):
             fail('configuration_changed', 'use the original provisioning config')
         if connection.get('url_auth') == 'sprite' and not url:
@@ -56,7 +56,7 @@ class Client:
         try:
             return identifier(json.loads((self.location / 'last-conversation.json').read_text())['id'])
         except (OSError, ValueError, KeyError):
-            fail('conversation_missing', 'start a prompt or select an ID from managoat conversations')
+            fail('conversation_missing', 'start a prompt or select an ID from manasprites conversations')
 
 
 def identifier(value):
@@ -130,13 +130,13 @@ def watch(client, cid, tid, json_output=False):
         except (OSError, http.client.HTTPException):
             failures += 1
             if failures >= 3:
-                fail('stream_disconnected', f'reconnect with managoat watch {cid}; the turn may still be running')
+                fail('stream_disconnected', f'reconnect with manasprites watch {cid}; the turn may still be running')
         # Normal idle stream closure is expected. Reconnect without resubmitting.
         time.sleep(0.2)
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(prog='managoat', description='Talk to the agent on your Sprite.')
+    parser = argparse.ArgumentParser(prog='manasprites', description='Talk to the agent on your Sprite.')
     sub = parser.add_subparsers(dest='command', required=True)
     for name in ('prompt', 'conversations', 'watch'):
         p = sub.add_parser(name)
@@ -179,7 +179,7 @@ def main(argv=None):
         try:
             result = client.api(path, {'prompt': prompt}, {'Idempotency-Key': secrets.token_hex(16)})
         except (OSError, http.client.HTTPException):
-            fail('submission_unknown', 'check managoat conversations before submitting again; the prompt may have been accepted')
+            fail('submission_unknown', 'check manasprites conversations before submitting again; the prompt may have been accepted')
         cid = cid or identifier(result['data']['id'])
         save(client.location / 'last-conversation.json', {'id': cid})
         print('Conversation: ' + cid, file=sys.stderr, flush=True)
@@ -189,10 +189,10 @@ def main(argv=None):
         # v0.1.0 acknowledges follow-ups without a turn ID. Refuse to attribute
         # concurrent clients' turns to this prompt when the result is ambiguous.
         if len(candidates) != 1 or candidates[0]['prompt'] != prompt:
-            fail('turn_ambiguous', f'inspect managoat watch {cid}; no prompt was resubmitted')
+            fail('turn_ambiguous', f'inspect manasprites watch {cid}; no prompt was resubmitted')
         tid = candidates[0]['id']
     try:
         watch(client, cid, tid, args.json)
     except KeyboardInterrupt:
-        print(f'\nStopped watching; the agent may still be working. Resume: managoat watch {cid}', file=sys.stderr)
+        print(f'\nStopped watching; the agent may still be working. Resume: manasprites watch {cid}', file=sys.stderr)
         raise SystemExit(130)

@@ -8,11 +8,11 @@ After [provisioning](provisioning.md), run from the directory containing your
 `agent.json`, or pass `--file /path/to/agent.json` to any command:
 
 ```sh
-managoat prompt "Inspect this project and explain how to run it."
-managoat prompt --continue "Run its tests and fix the failures."
-managoat conversations
-managoat prompt --conversation CONVERSATION_ID "Add a regression test for the bug we fixed."
-managoat watch CONVERSATION_ID
+manasprites prompt "Inspect this project and explain how to run it."
+manasprites prompt --continue "Run its tests and fix the failures."
+manasprites conversations
+manasprites prompt --conversation CONVERSATION_ID "Add a regression test for the bug we fixed."
+manasprites watch CONVERSATION_ID
 ```
 
 Each `prompt` submits one turn. Without `--continue` or `--conversation`, it
@@ -23,7 +23,7 @@ only that ID locally, not your prompts or the agent's answers.
 Agent text streams to stdout, and tool activity and connection messages go to
 stderr. A completed turn exits zero; failed or interrupted turns exit nonzero.
 `--json` emits one JSON event per line instead of rendering blocks. Read a prompt
-from stdin with `managoat prompt -`. `managoat conversations --json` returns the
+from stdin with `manasprites prompt -`. `manasprites conversations --json` returns the
 API's conversation list, which may include private prompt content.
 
 Ctrl-C stops the stream without cancelling work. `watch` replays the latest turn
@@ -35,7 +35,7 @@ clients submit at once and the accepted turn cannot be identified unambiguously,
 the CLI reports that ambiguity rather than choosing another client's output.
 
 The CLI uses the saved local URL and key from provisioning. For a private Sprite,
-run the `proxy_command` from `managoat sprite status --file agent.json --json`
+run the `proxy_command` from `manasprites sprite status --file agent.json --json`
 in another terminal and pass `--url http://127.0.0.1:8080` (or the configured port)
 to conversation commands. HTTPS redirects are refused to avoid forwarding the key.
 A rotated service key must also be updated in your local client key file.
@@ -48,7 +48,7 @@ API described below. The CLI does not auto-approve requests under an `ask` polic
 The following examples use `curl` and `jq`. Load the same connection details:
 
 ```sh
-managoat sprite status --file agent.json --json > connection.json
+manasprites sprite status --file agent.json --json > connection.json
 export BASE_URL="$(jq -r '.url' connection.json)"
 export MANAGOAT_API_KEY="$(cat "$(jq -r '.api_key_file' connection.json)")"
 ```

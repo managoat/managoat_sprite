@@ -26,15 +26,15 @@ class CLIReleaseTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.prefix = self.root / 'prefix with spaces'
-        self.archive = self.dist / 'managoat-cli.tar.gz'
+        self.archive = self.dist / 'manasprites.tar.gz'
 
     def install(self, *args):
         return subprocess.run(['sh', str(self.dist / 'install-cli.sh'), '--prefix', str(self.prefix), *args],
-            env={**os.environ, 'MANAGOAT_CLI_ARCHIVE': str(self.archive)},
+            env={**os.environ, 'MANASPRITES_ARCHIVE': str(self.archive)},
             cwd=self.root, text=True, capture_output=True, timeout=15)
 
     def version(self):
-        return subprocess.run([str(self.prefix / 'bin/managoat'), '--version'],
+        return subprocess.run([str(self.prefix / 'bin/manasprites'), '--version'],
             cwd=self.root, text=True, capture_output=True, timeout=15)
 
     def rewrite(self, change):
@@ -50,23 +50,35 @@ class CLIReleaseTests(unittest.TestCase):
 
     def checksum(self):
         digest = hashlib.sha256(self.archive.read_bytes()).hexdigest()
-        Path(str(self.archive) + '.sha256').write_text(digest + '  managoat-cli.tar.gz\n')
+        Path(str(self.archive) + '.sha256').write_text(digest + '  manasprites.tar.gz\n')
 
     def test_archive_installs_outside_checkout_and_reinstalls_without_touching_state(self):
         result = self.install()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.version().stdout.strip(), 'managoat CLI ' + VERSION)
-        state = self.prefix / 'share/managoat-client/keep'
+        self.assertEqual(self.version().stdout.strip(), 'manasprites ' + VERSION)
+        self.assertFalse((self.prefix / 'bin/managoat').exists())
+        state = self.prefix / 'share/manasprites/keep'
         state.parent.mkdir(parents=True)
         state.write_text('preserve local state')
         for command in [('prompt', '--help'), ('sprite', 'create', '--help'), ('watch', '--help')]:
-            result = subprocess.run([str(self.prefix / 'bin/managoat'), *command], cwd=self.root, capture_output=True)
+            result = subprocess.run([str(self.prefix / 'bin/manasprites'), *command], cwd=self.root, capture_output=True)
             self.assertEqual(result.returncode, 0, result.stderr)
-        before = (self.prefix / 'bin/managoat').read_bytes()
+        before = (self.prefix / 'bin/manasprites').read_bytes()
         self.assertEqual(self.install().returncode, 0)
-        self.assertEqual((self.prefix / 'bin/managoat').read_bytes(), before)
+        self.assertEqual((self.prefix / 'bin/manasprites').read_bytes(), before)
         self.assertEqual(state.read_text(), 'preserve local state')
-        self.assertEqual(len(list((self.prefix / 'lib/managoat-cli').iterdir())), 1)
+        self.assertEqual(len(list((self.prefix / 'lib/manasprites').iterdir())), 1)
+
+    def test_existing_managoat_command_is_untouched_and_still_runs(self):
+        existing = self.prefix / 'bin/managoat'
+        existing.parent.mkdir(parents=True)
+        existing.write_text('#!/bin/sh\nprintf "other-tool\\n"\n')
+        existing.chmod(0o755)
+        result = self.install()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output = subprocess.run([str(existing)], check=True, capture_output=True, text=True)
+        self.assertEqual(output.stdout, 'other-tool\n')
+        self.assertEqual(self.version().stdout.strip(), 'manasprites ' + VERSION)
 
     def test_updated_archive_atomically_selects_new_cli_version(self):
         self.assertEqual(self.install().returncode, 0)
@@ -75,19 +87,19 @@ class CLIReleaseTests(unittest.TestCase):
         self.rewrite(update)
         result = self.install('--version', '0.1.99')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.version().stdout.strip(), 'managoat CLI 0.1.99')
-        self.assertEqual(len(list((self.prefix / 'lib/managoat-cli').iterdir())), 2)
+        self.assertEqual(self.version().stdout.strip(), 'manasprites 0.1.99')
+        self.assertEqual(len(list((self.prefix / 'lib/manasprites').iterdir())), 2)
 
     def test_bad_checksum_preserves_installed_launcher(self):
         self.assertEqual(self.install().returncode, 0)
-        before = (self.prefix / 'bin/managoat').read_bytes()
+        before = (self.prefix / 'bin/manasprites').read_bytes()
         self.archive = self.root / 'corrupt.tar.gz'
         self.archive.write_bytes(b'corrupted archive')
-        Path(str(self.archive) + '.sha256').write_text('0' * 64 + '  managoat-cli.tar.gz\n')
+        Path(str(self.archive) + '.sha256').write_text('0' * 64 + '  manasprites.tar.gz\n')
         result = self.install()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('checksum mismatch', result.stderr)
-        self.assertEqual((self.prefix / 'bin/managoat').read_bytes(), before)
+        self.assertEqual((self.prefix / 'bin/manasprites').read_bytes(), before)
         self.assertEqual(self.version().returncode, 0)
 
     def test_unsafe_archive_is_rejected_before_installing(self):
@@ -107,7 +119,7 @@ class CLIReleaseTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('version mismatch', result.stderr)
         self.assertFalse(self.prefix.exists())
-        launcher = self.prefix / 'bin/managoat'
+        launcher = self.prefix / 'bin/manasprites'
         launcher.parent.mkdir(parents=True)
         launcher.write_text('unrelated executable')
         result = self.install()
@@ -121,7 +133,7 @@ class CLIReleaseTests(unittest.TestCase):
                        check=True, capture_output=True)
         self.assertEqual(self.archive.read_bytes(), (other / self.archive.name).read_bytes())
         with tarfile.open(self.archive) as archive:
-            self.assertEqual(set(archive.getnames()), {'managoat.py', 'provision.py', 'provision_remote.py',
+            self.assertEqual(set(archive.getnames()), {'manasprites.py', 'provision.py', 'provision_remote.py',
                 'chat.py', 'install-cli.py', 'CLI_VERSION', 'LICENSE'})
 
 

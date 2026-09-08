@@ -158,7 +158,7 @@ def fingerprint(c):
 
 
 def directory(c):
-    root = Path(os.environ.get('MANAGOAT_CLIENT_ROOT', Path.home() / '.local/share/managoat-client'))
+    root = Path(os.environ.get('MANASPRITES_ROOT', Path.home() / '.local/share/manasprites'))
     return root / c['org'] / c['name']
 
 
@@ -294,7 +294,7 @@ def provision(c, action, retry_bootstrap=False):
         if state and state.get('config_hash') != digest:
             fail('configuration_changed', 'use the original config to resume, or a new Sprite name')
         if action == 'status' and not state:
-            fail('not_provisioned', 'run managoat sprite create --file with this configuration first')
+            fail('not_provisioned', 'run manasprites sprite create --file with this configuration first')
         if state and not (location / 'client.key').is_file():
             fail('client_key_missing', 'restore the local client key; it will not be silently regenerated')
         if not state:
@@ -352,7 +352,7 @@ def provision(c, action, retry_bootstrap=False):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(prog='managoat sprite', description='Provision an agent on a Sprite from your computer.')
+    parser = argparse.ArgumentParser(prog='manasprites sprite', description='Provision an agent on a Sprite from your computer.')
     sub = parser.add_subparsers(dest='action', required=True)
     for name in ('create', 'status'):
         p = sub.add_parser(name)

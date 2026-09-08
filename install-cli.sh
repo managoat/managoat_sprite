@@ -2,7 +2,7 @@
 # Install the host CLI on macOS or Linux; no checkout or build tools needed.
 set -eu
 umask 077
-version=0.1.0
+version=0.2.0
 prefix="$HOME/.local"
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -25,12 +25,12 @@ if sys.version_info < (3, 9):
 if not re.fullmatch(r'\d+\.\d+\.\d+', sys.argv[1]):
     sys.exit('Invalid CLI release version.')
 PY
-stage=$(mktemp -d "${TMPDIR:-/tmp}/managoat-cli.XXXXXX")
+stage=$(mktemp -d "${TMPDIR:-/tmp}/manasprites.XXXXXX")
 trap 'rm -rf "$stage"' EXIT HUP INT TERM
-archive=managoat-cli.tar.gz
-if [ -n "${MANAGOAT_CLI_ARCHIVE:-}" ]; then
-  cp "$MANAGOAT_CLI_ARCHIVE" "$stage/$archive"
-  cp "$MANAGOAT_CLI_ARCHIVE.sha256" "$stage/$archive.sha256"
+archive=manasprites.tar.gz
+if [ -n "${MANASPRITES_ARCHIVE:-}" ]; then
+  cp "$MANASPRITES_ARCHIVE" "$stage/$archive"
+  cp "$MANASPRITES_ARCHIVE.sha256" "$stage/$archive.sha256"
 else
   command -v curl >/dev/null || { echo 'Install curl first.' >&2; exit 1; }
   base="https://github.com/managoat/managoat_sprite/releases/download/cli-v$version"
@@ -41,14 +41,14 @@ python3 - "$stage" "$version" <<'PY'
 import hashlib, pathlib, re, sys, tarfile
 root = pathlib.Path(sys.argv[1])
 try:
-    archive = root / 'managoat-cli.tar.gz'
+    archive = root / 'manasprites.tar.gz'
     if archive.stat().st_size > 20 * 1024 * 1024:
         raise ValueError('CLI archive exceeds size limit')
-    checksum = (root / 'managoat-cli.tar.gz.sha256').read_text().strip()
-    match = re.fullmatch(r'([0-9a-f]{64})  managoat-cli\.tar\.gz', checksum)
+    checksum = (root / 'manasprites.tar.gz.sha256').read_text().strip()
+    match = re.fullmatch(r'([0-9a-f]{64})  manasprites\.tar\.gz', checksum)
     if not match or hashlib.sha256(archive.read_bytes()).hexdigest() != match[1]:
         raise ValueError('CLI archive checksum mismatch')
-    expected = {'managoat.py', 'provision.py', 'provision_remote.py', 'chat.py',
+    expected = {'manasprites.py', 'provision.py', 'provision_remote.py', 'chat.py',
                 'install-cli.py', 'CLI_VERSION', 'LICENSE'}
     with tarfile.open(archive) as tar:
         members = tar.getmembers()

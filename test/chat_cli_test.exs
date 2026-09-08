@@ -23,7 +23,7 @@ defmodule Managoat.Sprite.ChatCLITest do
 
     {_, 0} =
       System.cmd("sh", [Path.join(artifacts, "install-cli.sh"), "--prefix", prefix],
-        env: [{"MANAGOAT_CLI_ARCHIVE", Path.join(artifacts, "managoat-cli.tar.gz")}]
+        env: [{"MANASPRITES_ARCHIVE", Path.join(artifacts, "manasprites.tar.gz")}]
       )
 
     script = """
@@ -37,9 +37,9 @@ defmodule Managoat.Sprite.ChatCLITest do
     private_write(root / 'client.key', 'test-secret')
     """
 
-    env = [{"MANAGOAT_CLIENT_ROOT", client_root}]
+    env = [{"MANASPRITES_ROOT", client_root}]
     {_, 0} = System.cmd("python3", ["-c", script, config, "http://127.0.0.1:#{port}"], env: env)
-    %{cli: Path.join(prefix, "bin/managoat"), config_file: config, env: env}
+    %{cli: Path.join(prefix, "bin/manasprites"), config_file: config, env: env}
   end
 
   test "installed CLI prompts, continues the real ACP session, lists and watches", ctx do

@@ -6,7 +6,6 @@ mix compile --warnings-as-errors
 mix release managoat --overwrite
 release=_build/prod/rel/managoat
 cp scripts/managoat.py "$release/managoat.py"
-cp scripts/CLI_VERSION scripts/chat.py scripts/provision.py scripts/provision_remote.py "$release/"
 cp scripts/service.py "$release/service.py"
 version=$(awk '{print $2}' "$release/releases/start_erl.data")
 printf '%s\n' "$version" > "$release/VERSION"

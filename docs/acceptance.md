@@ -6,6 +6,19 @@ checksums. Publishing this prerelease does not mean the full v0.1 specification
 has passed acceptance. The source is public at
 [managoat/managoat_sprite](https://github.com/managoat/managoat_sprite).
 
+## Manasprites CLI rename
+
+CLI `0.2.0` uses the `manasprites` executable and `manasprites.tar.gz` archive.
+Its host entry point is separate from the Sprite service's operator command.
+New host state lives under `~/.local/share/manasprites`, with `MANASPRITES_ROOT`
+as the override. This is a clean rename, with no command alias or Sprite migration.
+
+Local checks exercise the renamed installed package against the real HTTP service
+and ACP ScriptedAgent, including prompt, continuation, list, and watch. Installer
+checks verify that a fresh installation creates only `manasprites` and that an
+existing unrelated `managoat` executable still runs unchanged after installation.
+Historical verification for the earlier CLI name follows below.
+
 ## CLI distribution
 
 The [CLI 0.1.0 preview](https://github.com/managoat/managoat_sprite/releases/tag/cli-v0.1.0)

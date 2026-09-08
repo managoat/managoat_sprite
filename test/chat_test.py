@@ -22,7 +22,7 @@ class ChatTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.env = patch.dict(os.environ, {'MANAGOAT_CLIENT_ROOT': str(self.root / 'client')})
+        self.env = patch.dict(os.environ, {'MANASPRITES_ROOT': str(self.root / 'client')})
         self.env.start()
         self.addCleanup(self.env.stop)
         self.config = self.root / 'agent.json'
@@ -53,7 +53,7 @@ class ChatTests(unittest.TestCase):
         return url
 
     def run_cli(self, *args, input=None):
-        return subprocess.run([sys.executable, str(REPO / 'bin/managoat'), *args,
+        return subprocess.run([sys.executable, str(REPO / 'bin/manasprites'), *args,
             '--file', str(self.config)], input=input, text=True, capture_output=True, timeout=15)
 
     def test_reconnect_replays_neither_prompt_nor_rendered_events(self):

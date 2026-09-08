@@ -1,47 +1,47 @@
 # Provision an agent from your computer
 
-The host CLI creates a Sprite, prepares its workspace, installs the released
+The `manasprites` CLI creates a Sprite, prepares its workspace, installs the released
 Managoat service, and returns connection details. You do not need to open a Sprite
-console to complete setup. The [CLI release](https://github.com/managoat/managoat_sprite/releases/tag/cli-v0.1.0)
+console to complete setup. The [CLI release](https://github.com/managoat/managoat_sprite/releases/tag/cli-v0.2.0)
 is distributed separately from the `v0.1.0` Sprite service.
 
 ## Install the host CLI
 
 You need macOS or Linux, Python 3.9+, curl, and an installed, authenticated
 [Sprites CLI](https://docs.sprites.dev/cli/commands/). Run `sprite login` to set up
-your account. Managoat uses that login through `sprite api` and `sprite exec`;
+your account. Manasprites uses that login through `sprite api` and `sprite exec`;
 it does not copy the organization token to the agent's computer.
 
 Install the released CLI:
 
 ```sh
-curl -fsSL https://github.com/managoat/managoat_sprite/releases/download/cli-v0.1.0/install-cli.sh | sh
+curl -fsSL https://github.com/managoat/managoat_sprite/releases/download/cli-v0.2.0/install-cli.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
-managoat sprite --help
+manasprites sprite --help
 ```
 
 The installer checks the archive's SHA-256 and installs into `~/.local`. Add
-`~/.local/bin` to your shell profile's `PATH`. `managoat --version` reports the
+`~/.local/bin` to your shell profile's `PATH`. `manasprites --version` reports the
 CLI version, which is independent of your Sprite service version.
 
 For a different install location:
 
 ```sh
-curl -fsSL https://github.com/managoat/managoat_sprite/releases/download/cli-v0.1.0/install-cli.sh | sh -s -- --prefix /path/to/prefix
+curl -fsSL https://github.com/managoat/managoat_sprite/releases/download/cli-v0.2.0/install-cli.sh | sh -s -- --prefix /path/to/prefix
 ```
 
-Repeat the installer to reinstall or update its own launcher. It preserves saved
-connections and keys and refuses to replace an unrelated `managoat` executable.
+The executable is `manasprites`. Repeat the installer to reinstall or update its
+own launcher. It preserves saved connections and keys and refuses to replace an unrelated `manasprites` executable.
 Updating the CLI does not upgrade or reconfigure an existing Sprite.
 
-For an offline install, download `install-cli.sh`, `managoat-cli.tar.gz`, and
-`managoat-cli.tar.gz.sha256` from the same release, then run:
+For an offline install, download `install-cli.sh`, `manasprites.tar.gz`, and
+`manasprites.tar.gz.sha256` from the same release, then run:
 
 ```sh
-MANAGOAT_CLI_ARCHIVE="$PWD/managoat-cli.tar.gz" sh install-cli.sh
+MANASPRITES_ARCHIVE="$PWD/manasprites.tar.gz" sh install-cli.sh
 ```
 
-For development, `./bin/managoat` runs from the repository, or install a checkout
+For development, `./bin/manasprites` runs from the repository, or install a checkout
 with `python3 scripts/install-cli.py`. See [development](development.md).
 
 ## Describe your agent
@@ -113,7 +113,7 @@ provide isolation from the agent itself.
 Export the inference key and any variables named in your configuration, then run:
 
 ```sh
-managoat sprite create --file /path/to/agent.json
+manasprites sprite create --file /path/to/agent.json
 ```
 
 For `url_auth: public`, setup finishes only after checking the external endpoint
@@ -133,7 +133,7 @@ For scripts, `--json` prints only connection metadata to stdout; progress goes t
 stderr. Keys and environment values are never included in that output:
 
 ```sh
-managoat sprite create --file /path/to/agent.json --json > connection.json
+manasprites sprite create --file /path/to/agent.json --json > connection.json
 export BASE_URL="$(jq -r '.url' connection.json)"
 export MANAGOAT_API_KEY="$(cat "$(jq -r '.api_key_file' connection.json)")"
 
@@ -147,8 +147,8 @@ From the directory containing `agent.json`, the host CLI can also load the saved
 connection details and stream a conversation directly:
 
 ```sh
-managoat prompt "Inspect this project and explain what we should work on next."
-managoat prompt --continue "Start with the first improvement and run its tests."
+manasprites prompt "Inspect this project and explain what we should work on next."
+manasprites prompt --continue "Start with the first improvement and run its tests."
 ```
 
 Use the [conversation walkthroughs](conversations.md) for CLI options and HTTP
@@ -162,7 +162,7 @@ with the same local key. This mode does not claim a publicly verified endpoint.
 Retrieve and recheck connection details later with:
 
 ```sh
-managoat sprite status --file /path/to/agent.json --json
+manasprites sprite status --file /path/to/agent.json --json
 ```
 
 ## Retry and recovery
@@ -179,7 +179,7 @@ Inspect its log and any still-running Sprite sessions, stop any remaining work,
 and then explicitly retry that unfinished command:
 
 ```sh
-managoat sprite create --file /path/to/agent.json --retry-bootstrap
+manasprites sprite create --file /path/to/agent.json --retry-bootstrap
 ```
 
 Earlier completed commands remain skipped. Bootstrap commands must be foreground
@@ -189,7 +189,7 @@ with an uncertain outcome; `--retry-bootstrap` is your decision to rerun after
 inspection, not an exactly-once guarantee.
 
 Local state and the private client key live under
-`~/.local/share/managoat-client/<org>/<name>/`; `MANAGOAT_CLIENT_ROOT` overrides
+`~/.local/share/manasprites/<org>/<name>/`; `MANASPRITES_ROOT` overrides
 that root. The key is mode 0600 and directories are mode 0700. Keep this directory
 if you want to resume setup or recover connection details. A missing key or
 changed configuration causes an explicit error, not silent key regeneration.

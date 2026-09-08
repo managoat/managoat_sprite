@@ -9,7 +9,7 @@ import re
 import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
-FILES = ('managoat.py', 'provision.py', 'provision_remote.py', 'chat.py', 'install-cli.py', 'CLI_VERSION')
+FILES = ('manasprites.py', 'provision.py', 'provision_remote.py', 'chat.py', 'install-cli.py', 'CLI_VERSION')
 
 
 def build(output):
@@ -17,7 +17,7 @@ def build(output):
     if not re.fullmatch(r'\d+\.\d+\.\d+', version):
         raise ValueError('CLI_VERSION must be a release version')
     output.mkdir(parents=True, exist_ok=True)
-    archive = output / 'managoat-cli.tar.gz'
+    archive = output / 'manasprites.tar.gz'
     with archive.open('wb') as raw, gzip.GzipFile(filename='', mode='wb', fileobj=raw, mtime=0) as compressed:
         with tarfile.open(fileobj=compressed, mode='w') as tar:
             for name in (*FILES, 'LICENSE'):

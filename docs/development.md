@@ -18,12 +18,12 @@ requires Linux; it is skipped on macOS.
 ## Build a CLI release
 
 The host CLI requires Python 3.9+ and uses only the standard library. Run it from
-`./bin/managoat`, or install a checkout with `python3 scripts/install-cli.py`.
+`./bin/manasprites`, or install a checkout with `python3 scripts/install-cli.py`.
 
 ```sh
 python3 scripts/build-cli.py
-MANAGOAT_CLI_ARCHIVE="$PWD/dist/cli/managoat-cli.tar.gz" sh install-cli.sh --prefix /tmp/managoat-cli
-/tmp/managoat-cli/bin/managoat --version
+MANASPRITES_ARCHIVE="$PWD/dist/cli/manasprites.tar.gz" sh install-cli.sh --prefix /tmp/manasprites
+/tmp/manasprites/bin/manasprites --version
 ```
 
 The build uses an explicit list of source files and reproducible archive metadata.

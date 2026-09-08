@@ -6,7 +6,8 @@
 
 To create the Sprite, clone a project, and bootstrap it from your computer, use
 the [host provisioning CLI](provisioning.md). The steps below install the service
-on a Sprite you already have. For prerequisites and connection options, see
+on a Sprite you already have. These service commands use `managoat` inside the
+Sprite; the host command on your computer is `manasprites`. For prerequisites and connection options, see
 the [manual installation walkthrough](manual-install.md).
 
 The Codex path has passed installation and real inference checks on a clean

@@ -213,7 +213,7 @@ class ProvisionTests(unittest.TestCase):
                     self_test.assertTrue(payload['client_key'].startswith('mgt_'))
                 return {'ok': True, 'ready': True}
         self_test = self
-        env = {'MANAGOAT_CLIENT_ROOT': str(self.root / 'client'), 'OPENAI_API_KEY': 'synthetic-provider-value', 'UNRELATED_SECRET': 'must-not-import'}
+        env = {'MANASPRITES_ROOT': str(self.root / 'client'), 'OPENAI_API_KEY': 'synthetic-provider-value', 'UNRELATED_SECRET': 'must-not-import'}
         output = io.StringIO()
         with patch.dict(os.environ, env), patch.object(host, 'Platform', Platform), contextlib.redirect_stderr(output):
             with self.assertRaisesRegex(RuntimeError, 'network lost'):
@@ -254,7 +254,7 @@ class ProvisionTests(unittest.TestCase):
             def remote(self, payload):
                 events.append(payload['action'])
                 return {'ok': True, 'ready': self.ready}
-        with patch.dict(os.environ, {'MANAGOAT_CLIENT_ROOT': str(self.root / 'client'), 'OPENAI_API_KEY': 'synthetic-provider-value'}), \
+        with patch.dict(os.environ, {'MANASPRITES_ROOT': str(self.root / 'client'), 'OPENAI_API_KEY': 'synthetic-provider-value'}), \
                 patch.object(host, 'Platform', Platform), \
                 patch.object(host, 'verify_endpoint', side_effect=lambda *args: events.append('verify')), \
                 contextlib.redirect_stderr(io.StringIO()):
@@ -288,7 +288,7 @@ class ProvisionTests(unittest.TestCase):
             host.validate_identity(self.config, info, state)
 
     def test_host_missing_environment_fails_before_platform_mutation(self):
-        with patch.dict(os.environ, {'MANAGOAT_CLIENT_ROOT': str(self.root / 'client')}, clear=True), patch.object(host, 'Platform') as platform:
+        with patch.dict(os.environ, {'MANASPRITES_ROOT': str(self.root / 'client')}, clear=True), patch.object(host, 'Platform') as platform:
             with self.assertRaisesRegex(RuntimeError, 'environment_missing'):
                 host.provision(self.config, 'create')
             platform.return_value.info.assert_not_called()
@@ -296,7 +296,7 @@ class ProvisionTests(unittest.TestCase):
     def test_changed_config_does_not_mutate_platform(self):
         location = self.root / 'client' / self.config['org'] / self.config['name']
         host.save(location / 'state.json', {'config_hash': 'different'})
-        with patch.dict(os.environ, {'MANAGOAT_CLIENT_ROOT': str(self.root / 'client')}), patch.object(host, 'Platform') as platform:
+        with patch.dict(os.environ, {'MANASPRITES_ROOT': str(self.root / 'client')}), patch.object(host, 'Platform') as platform:
             with self.assertRaisesRegex(RuntimeError, 'configuration_changed'):
                 host.provision(self.config, 'create')
             platform.assert_not_called()
@@ -357,13 +357,13 @@ class ProvisionTests(unittest.TestCase):
     def test_installed_host_cli_runs_without_source_checkout_and_preserves_foreign_launcher(self):
         prefix = self.root / 'installed'
         subprocess.run([sys.executable, str(SCRIPTS / 'install-cli.py'), '--prefix', str(prefix)], check=True, capture_output=True)
-        result = subprocess.run([str(prefix / 'bin/managoat'), 'sprite', 'create', '--help'], check=True, capture_output=True)
+        result = subprocess.run([str(prefix / 'bin/manasprites'), 'sprite', 'create', '--help'], check=True, capture_output=True)
         self.assertIn(b'--file', result.stdout)
         self.assertIn(b'--retry-bootstrap', result.stdout)
-        (prefix / 'bin/managoat').write_text('operator-owned executable')
+        (prefix / 'bin/manasprites').write_text('operator-owned executable')
         result = subprocess.run([sys.executable, str(SCRIPTS / 'install-cli.py'), '--prefix', str(prefix)], capture_output=True)
         self.assertNotEqual(result.returncode, 0)
-        self.assertEqual((prefix / 'bin/managoat').read_text(), 'operator-owned executable')
+        self.assertEqual((prefix / 'bin/manasprites').read_text(), 'operator-owned executable')
 
 
 if __name__ == '__main__':

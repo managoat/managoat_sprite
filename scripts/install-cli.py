@@ -7,19 +7,19 @@ from pathlib import Path
 import shutil
 import tempfile
 
-MARKER = '# Managoat host CLI launcher\n'
+MARKER = '# Manasprites CLI launcher\n'
 
 
 def install(prefix):
     source = Path(__file__).resolve().parent
     prefix = prefix.expanduser().resolve()
-    launcher = prefix / 'bin/managoat'
+    launcher = prefix / 'bin/manasprites'
     if launcher.exists() or launcher.is_symlink():
         if launcher.is_symlink() or MARKER not in launcher.read_text():
-            raise RuntimeError('managoat already exists at this prefix; choose a different --prefix')
-    files = ['managoat.py', 'provision.py', 'provision_remote.py', 'chat.py', 'CLI_VERSION']
+            raise RuntimeError('manasprites already exists at this prefix; choose a different --prefix')
+    files = ['manasprites.py', 'provision.py', 'provision_remote.py', 'chat.py', 'CLI_VERSION']
     digest = hashlib.sha256(b''.join((source / name).read_bytes() for name in files)).hexdigest()[:16]
-    library = prefix / 'lib/managoat-cli' / digest
+    library = prefix / 'lib/manasprites' / digest
     library.parent.mkdir(parents=True, exist_ok=True)
     if not library.exists():
         stage = Path(tempfile.mkdtemp(prefix='.install-', dir=library.parent))
@@ -33,7 +33,7 @@ def install(prefix):
     launcher.parent.mkdir(parents=True, exist_ok=True)
     content = ('#!/usr/bin/env python3\n' + MARKER + 'import sys\n'
                + 'sys.path.insert(0, ' + repr(str(library)) + ')\n'
-               + 'from managoat import entrypoint\nentrypoint()\n')
+               + 'from manasprites import entrypoint\nentrypoint()\n')
     fd, name = tempfile.mkstemp(dir=launcher.parent)
     try:
         with os.fdopen(fd, 'w') as file:
@@ -44,7 +44,7 @@ def install(prefix):
         if os.path.exists(name):
             os.unlink(name)
     print(f'Installed {launcher}')
-    print(f'Add {launcher.parent} to PATH, then run managoat sprite create --file agent.json')
+    print(f'Add {launcher.parent} to PATH, then run manasprites sprite create --file agent.json')
 
 
 if __name__ == '__main__':
@@ -54,4 +54,4 @@ if __name__ == '__main__':
     try:
         install(args.prefix)
     except (RuntimeError, OSError) as error:
-        parser.exit(1, f'managoat: {error}\n')
+        parser.exit(1, f'manasprites: {error}\n')
