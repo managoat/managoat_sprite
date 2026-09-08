@@ -403,8 +403,12 @@ def restore(args):
 
 
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == 'sprite':
+        from provision import main as provision_main
+        return provision_main(sys.argv[2:])
     parser = argparse.ArgumentParser(prog='managoat')
     sub = parser.add_subparsers(dest='command', required=True)
+    sub.add_parser('sprite', help='create or inspect a Sprite from your computer')
     p = sub.add_parser('install')
     p.add_argument('--version')
     p.add_argument('--runtime', choices=['claude', 'codex'])
@@ -490,9 +494,13 @@ def main():
             print('Uninstalled service and releases; configuration, history and workspace are retained')
 
 
-if __name__ == '__main__':
+def entrypoint():
     try:
         main()
     except (RuntimeError, OSError, ValueError, sqlite3.Error) as exc:
         print(f'managoat: {exc}', file=sys.stderr)
         sys.exit(1)
+
+
+if __name__ == '__main__':
+    entrypoint()

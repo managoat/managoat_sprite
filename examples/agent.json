@@ -1,0 +1,20 @@
+{
+  "name": "my-project-agent",
+  "org": "your-sprites-org",
+  "url_auth": "public",
+  "release": "0.1.0",
+  "workspace": "/home/sprite/project",
+  "agent": {
+    "runtime": "codex",
+    "name": "Project agent",
+    "instructions_file": "instructions.md",
+    "permissions": {"default": "auto_allow"}
+  },
+  "repository": {
+    "url": "https://github.com/managoat/managoat_sprite.git",
+    "ref": "v0.1.0"
+  },
+  "env": [],
+  "bootstrap": ["git status --short"],
+  "cors_origins": ["http://localhost:5173"]
+}

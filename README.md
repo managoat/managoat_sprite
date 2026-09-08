@@ -1,9 +1,11 @@
 # Managoat Sprite
 
-**Give your Sprite a conversations API.**
+**Stand up a persistent coding agent with a conversations API.**
 
-Send a prompt. Watch an agent edit code, run commands, and work on your project.
-Come back for a follow-up with your files and conversation history still there.
+Describe your agent and project in a config file. Run one command to create a
+Sprite, clone the repository, run setup, and get back a URL with an API key.
+Send a prompt, watch the agent work, and come back for a follow-up with your
+files and conversation history still there.
 
 - **Build your own agent app.** Connect through HTTP and live event streams.
 - **Keep the conversation going.** Resume context across turns and service restarts.
@@ -13,13 +15,15 @@ Your Sprite. Your workspace. One active turn, multiple conversations.
 
 ## Quick tour
 
-Managoat installs on an existing [Sprite](https://sprites.dev), a persistent
-Linux computer. It runs an agent in a directory you choose and exposes that
-agent through an authenticated HTTP API. Bring a project already on the Sprite,
-or start with an empty workspace and ask the agent to build something.
+Managoat runs on a [Sprite](https://sprites.dev), a persistent Linux computer.
+The CLI on your computer creates the Sprite, prepares its workspace, and starts
+the conversations service. The service runs Codex or Claude in that workspace
+and exposes the agent through an authenticated HTTP API. You can also install
+the service on a Sprite you already have.
 
 | Piece | What it does |
 |---|---|
+| Provisioning config | A JSON file describing the Sprite, agent, repository, environment, and bootstrap commands |
 | Agent | The configured Codex or Claude runtime, exposed as agent `default` |
 | Workspace | The project directory where the agent reads files, edits code, and runs commands |
 | Conversation | A saved runtime session with its own history and follow-up context |
@@ -38,7 +42,121 @@ from a terminal, your own app, or a compatible Fountain chat client.
 
 ## Setup
 
-### 1. Prepare your Sprite
+### 1. Install the CLI on your computer
+
+You need macOS or Linux, Python 3.9+, Git, and an authenticated
+[Sprites CLI](https://docs.sprites.dev/quickstart/). Install the Sprites CLI and
+run `sprite login` first. The API examples below also use `curl` and `jq`.
+You do not need Elixir or Erlang to provision an agent.
+
+The host CLI is available from this repository; the already-published `v0.1.0`
+service archives predate it. Clone the current source and install:
+
+```sh
+git clone https://github.com/managoat/managoat_sprite.git
+cd managoat_sprite
+python3 scripts/install-cli.py
+export PATH="$HOME/.local/bin:$PATH"
+managoat sprite --help
+```
+
+If you already have this checkout, start with the Python command. The installer
+copies the CLI into `~/.local`, so it keeps working if you move the checkout.
+Add the `PATH` setting to your shell profile to keep the command available.
+
+### 2. Describe your agent and project
+
+Copy the example config and instructions into your own directory:
+
+```sh
+export AGENT_DIR="$HOME/.config/managoat/my-project"
+mkdir -p "$AGENT_DIR"
+cp examples/agent.json examples/instructions.md "$AGENT_DIR/"
+```
+
+Edit `agent.json` before running setup:
+
+| Setting | What to choose |
+|---|---|
+| `org`, `name` | Your Sprites organization and a new Sprite name |
+| `url_auth` | `public` for a direct URL protected by Managoat's bearer key, or `sprite` for private access through a tunnel |
+| `agent` | Codex or Claude, a display name, instructions, and tool permissions |
+| `repository` | An HTTPS Git URL and ref; omit this object to start with an empty workspace |
+| `env` | Names of exported variables to import, such as `["APP_ENV", "DATABASE_URL"]`; keep their values out of the JSON |
+| `bootstrap` | Ordered Bash commands to prepare the project, such as `["npm ci", "npm run build"]` |
+
+The [example config](examples/agent.json) clones this repository at `v0.1.0` and
+runs `git status --short`. Replace those settings with your project and its setup
+commands. Edit `instructions.md` to tell the agent how to work on it. Bootstrap
+commands run in the configured workspace before the service starts.
+
+Export `OPENAI_API_KEY` for Codex, or `ANTHROPIC_API_KEY` for Claude, along with
+any variables named in `env`. The inference key is imported automatically for
+the agent. In an interactive **Bash** shell, you can enter it without putting
+its value in shell history:
+
+```bash
+read -rsp 'OpenAI API key: ' OPENAI_API_KEY; printf '\n'
+export OPENAI_API_KEY
+```
+
+The inference key pays for model requests. Managoat generates a separate
+application key for clients of your conversations API. See the
+[full configuration reference](docs/provisioning.md#describe-your-agent) for
+private Git repositories, model selection, CORS, and bootstrap timeouts.
+
+### 3. Create the Sprite and connect
+
+Run on your computer, with the variables from the previous step still exported:
+
+```sh
+managoat sprite create --file "$AGENT_DIR/agent.json" --json > "$AGENT_DIR/connection.json"
+
+export BASE_URL="$(jq -r '.url' "$AGENT_DIR/connection.json")"
+export MANAGOAT_API_KEY="$(cat "$(jq -r '.api_key_file' "$AGENT_DIR/connection.json")")"
+```
+
+The command creates the Sprite, clones your repository, runs bootstrap commands,
+installs the pinned service release, and waits for readiness. Progress goes to
+stderr; `connection.json` contains the assigned URL and local key-file path,
+without the key value. Setup makes no paid model request.
+
+With `url_auth: public`, setup also verifies authenticated access and initial SSE
+streaming through the public URL. With `url_auth: sprite`, run the returned
+`proxy_command` in a second terminal and keep it open, then set `BASE_URL` to
+`http://127.0.0.1:8080` (or your configured port). Private mode reports external
+access as unverified; the Managoat key alone cannot unlock a private Sprite URL.
+
+Check the API from the same client shell:
+
+```sh
+curl -fsS "$BASE_URL/readyz" \
+  -H "Authorization: Bearer $MANAGOAT_API_KEY" | jq .
+
+curl -fsS "$BASE_URL/api/agents" \
+  -H "Authorization: Bearer $MANAGOAT_API_KEY" | jq .
+```
+
+You are ready for the conversation examples below. Every Managoat bearer key
+grants owner access, including asking the agent to run commands. The example
+uses `auto_allow` tool permissions; choose `ask` if you want to answer tool
+permission requests through the API.
+
+To check the deployment later, run
+`managoat sprite status --file "$AGENT_DIR/agent.json" --json`. Rerunning `create`
+with the same config preserves the Sprite, key, completed setup, and workspace
+edits. This is initial provisioning and recovery, not a configuration updater.
+A failed bootstrap step requires inspection and an explicit `--retry-bootstrap`;
+see [retry and recovery](docs/provisioning.md#retry-and-recovery).
+
+### Alternative: install on an existing Sprite
+
+<details>
+<summary>Manual installation, prerequisites, and connection options</summary>
+
+#### 1. Prepare an existing Sprite
+
+To install manually on an existing Sprite, use the steps below.
 
 On your computer, install and authenticate the Sprites CLI using the
 [Sprites quickstart](https://docs.sprites.dev/quickstart/). Then create a Sprite
@@ -77,7 +195,7 @@ export OPENAI_API_KEY
 This key pays for model requests. Managoat generates a separate application key
 for clients of your conversations API.
 
-### 2. Install Managoat
+#### 2. Install Managoat
 
 With `OPENAI_API_KEY` exported, run inside the Sprite:
 
@@ -112,7 +230,7 @@ Another service owning Sprite HTTP routing causes `http_service_conflict`.
 Changing the port does not resolve routing ownership; use `--no-http-route` when
 you intend to configure your own gateway.
 
-### 3. Check readiness and connect
+#### 3. Check readiness and connect
 
 For the examples below, use a shell **inside the Sprite** with `curl` and `jq`
 installed:
@@ -145,11 +263,14 @@ platform access; use the actual URL shown by `sprite info` as `BASE_URL`.
 Managoat still requires its bearer key. A private Sprite URL has a separate
 platform authentication layer that the Managoat key cannot satisfy. See
 [Sprites HTTP access](https://docs.sprites.dev/working-with-sprites/).
-Direct URL streaming remains a release acceptance gate.
+Authenticated public access and initial SSE streaming have passed live checks;
+see the [acceptance record](docs/acceptance.md) for remaining qualification.
 
 Every Managoat bearer key grants owner access, including asking the agent to run
 commands. The default tool policy is `auto_allow`; the agent and service share
 the same computer and OS authority.
+
+</details>
 
 ## Example: explore a project, then run its tests
 
@@ -343,6 +464,7 @@ release. Verify the archives and a clean Sprite installation before publishing
 the draft. The initial `v0.1.0` distribution is marked as a prerelease while the
 remaining acceptance gates are open.
 
+- [Provisioning and configuration](docs/provisioning.md): host CLI, environment import, private Git, and setup recovery.
 - [Setup and operation](docs/guide.md): configuration, backup/restore, upgrades, and client integration checks.
 - [API contract](docs/spec.md#http-contract) and [OpenAPI document](priv/openapi.json): endpoints, envelopes, events, and error semantics.
 - [Acceptance record](docs/acceptance.md): executed checks and remaining release gates.

@@ -6,7 +6,12 @@ Status: implementation target; see acceptance.md for current verification. Writt
 
 Provision a Sprite, run one installation command inside it, and that computer now serves Managoat's conversations API. The installer supplies the application and its runtime dependencies, configures one agent, registers a persistent HTTP service, and verifies readiness. The operator supplies inference credentials and chooses the workspace. No Fountain account, external database, Elixir toolchain, or Managoat control plane is required.
 
-The Sprite already exists. Managoat adopts the computer it is installed on. Creating a conversation never provisions another machine. Ending or deleting a conversation never destroys the Sprite or removes the operator's workspace.
+The service installer adopts the computer it is installed on. An optional
+host-side provisioning CLI can now create that Sprite first, clone a repository,
+run explicit bootstrap commands, install a pinned service release, and verify
+connection details. Its configuration and recovery contract are documented in
+[provisioning.md](provisioning.md). These setup operations run outside the
+conversation engine. Creating a conversation never provisions another machine. Ending or deleting a conversation never destroys the Sprite or removes the operator's workspace.
 
 Product and executable name: `managoat`. Repository and OTP application: `managoat_sprite`.
 The source is published at https://github.com/managoat/managoat_sprite. The

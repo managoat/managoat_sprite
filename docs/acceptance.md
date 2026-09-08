@@ -6,6 +6,45 @@ checksums. Publishing this prerelease does not mean the full v0.1 specification
 has passed acceptance. The source is public at
 [managoat/managoat_sprite](https://github.com/managoat/managoat_sprite).
 
+## Host provisioning (current source checkout)
+
+The host CLI is implemented after the `v0.1.0` service release. It is available
+from the checkout via `bin/managoat` or `scripts/install-cli.py`; it is not part
+of the existing release archives. See [provisioning.md](provisioning.md).
+
+Executed checks on 2026-09-08:
+
+- Python suite: 34 pass and the Linux watchdog is skipped on macOS; all 35 pass
+  on Linux. New coverage executes real Git clones, HTTPS-token-style askpass
+  authentication against a local HTTP fixture, Bash bootstrap commands, timeout
+  and output-limit process cleanup, local HTTP/SSE checks, and the installed host
+  launcher. Platform fault tests use a simulated API boundary, including a real
+  CLI subprocess fixture; they do not establish platform behavior by themselves.
+- The actual host CLI created a fresh private Sprite, cloned the pinned public
+  repository, ran bootstrap with an explicitly imported application variable,
+  installed published service `0.1.0`, and returned the platform URL and a local
+  private client-key file. It reused the same Sprite/key on repeated create and
+  status commands without requiring the inference variable again.
+- The imported application variable reached a real local subprocess through
+  `Managoat.Sprite.Runtime.env()` after service restart. A subsequent provisioning
+  retry preserved a workspace edit instead of rerunning completed bootstrap.
+- A second fresh Sprite was provisioned with `url_auth: public`. The host CLI
+  completed clone/bootstrap/install, changed platform access after local
+  readiness, and returned `external_access: verified`. Live checks through the
+  platform-assigned HTTPS URL verified missing/invalid-key rejection,
+  authenticated readiness and agent discovery, browser CORS preflight, and SSE
+  framing. A separate open-ended SSE request delivered its first `: connected`
+  bytes within 10 seconds, before the stream's idle timeout. Both temporary
+  validation Sprites were deleted after testing.
+
+Live setup used a placeholder provider credential and made no inference request.
+Private Git authentication is covered by a local fixture, not a live private Git
+host. The public ingress check establishes authenticated access and initial SSE
+streaming, not a browser UI walkthrough or streamed model/tool output from the
+published release. Those remain qualification gaps, along with hard-crash
+bootstrap process ownership; an uncertain bootstrap step requires operator
+inspection and explicit retry.
+
 ## v0.1.0 distribution verification
 
 The [release workflow](https://github.com/managoat/managoat_sprite/actions/runs/34192825292)
@@ -26,7 +65,8 @@ preservation after a service restart.
 These fresh-install checks used a placeholder inference credential and made no
 model requests. Paid inference and continuation evidence below comes from the
 earlier development builds, not a fresh paid probe of these release archives.
-Live ARM64 Sprite installation and direct URL access remain unverified.
+Live ARM64 Sprite installation remains unverified. Public URL access to this
+release was subsequently verified by the host provisioning checks above.
 
 | Archive | SHA-256 |
 |---|---|
@@ -93,8 +133,9 @@ The full contract remains [the specification](spec.md). In particular:
 - Claude real inference, permission and continuation parity. Only an OpenAI
   credential was supplied for live provider tests; Claude is implemented but
   is not qualified by these results.
-- Direct Sprite URL access, externally streamed first bytes, a browser UI
-  walkthrough, and observed idle sleep/cold wake.
+- Streamed model/tool output through the public Sprite URL, a browser UI
+  walkthrough, and observed idle sleep/cold wake. Authenticated public access and
+  initial SSE bytes have passed the host provisioning checks above.
 - The full fault matrix at dispatch, permission-answer and completion
   boundaries; renewal failures; slow readers; corrupt sessions and database;
   disk exhaustion; and real maintenance failure tests on a Sprite.
