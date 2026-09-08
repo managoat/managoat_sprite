@@ -3,6 +3,9 @@
 Product direction recorded 2026-09-08. This extends Manasprites with a local
 application; it does not replace the existing CLI or Sprite conversations API.
 
+Proposed next integration: [A2A access and agent-card handoff brief](a2a-brief.md).
+A2A support is not implemented yet.
+
 ## Intended product
 
 A Fountain-like personal workspace on the operator's laptop, focused on Sprites.
