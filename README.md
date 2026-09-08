@@ -9,6 +9,23 @@ Live checks cover private Sprite creation, Codex work and continuation, interrup
 and file/Git inspection; remaining qualification is tracked in the
 [desktop plan and verification record](docs/desktop.md).
 
+The native macOS app, shown with synthetic demo agents:
+
+![Native fleet overview showing two agents awaiting approval](docs/screenshots/desktop-fleet.png)
+
+<details>
+<summary>Conversations, files, and Git changes</summary>
+
+![Native conversation workbench with a project file preview](docs/screenshots/desktop-files.png)
+
+![Native conversation workbench with an unstaged Git diff](docs/screenshots/desktop-changes.png)
+
+These captures come from the running native WebKit app. The demo uses local
+ACP test agents and a real Git repository; no account data or private transcripts
+appear in the screenshots.
+
+</details>
+
 ```sh
 manasprites sprite create --file agent.json
 manasprites prompt "Build a Python reading-list CLI. Save to JSON. Write and run tests."

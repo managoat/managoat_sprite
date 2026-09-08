@@ -8,6 +8,13 @@ local state. The macOS shell is Tauri + ElixirKit, following the author's
 This is a separate Mix project. The existing Python CLI and Elixir service at the
 repository root retain their own builds, dependencies, data and release format.
 
+![Native macOS fleet overview with synthetic demo agents](../docs/screenshots/desktop-fleet.png)
+
+![Conversation and project file inspection in native WebKit](../docs/screenshots/desktop-files.png)
+
+[View the Git diff screenshot](../docs/screenshots/desktop-changes.png). All
+screenshots use synthetic demo data from the native workflow test.
+
 ## Implemented
 
 - Phoenix LiveView fleet board, agent navigation, conversations and local job history.
@@ -133,10 +140,15 @@ open src-tauri/target/release/bundle/macos/Manasprites.app
 
 The native fleet probe drives the production WebKit window through credential
 settings, attachment, two simultaneous approval waits, continuation, interruption,
-local removal and restart. It runs two real local service processes with ACP
-ScriptedAgents and synthetic state. Its opt-in native hook accepts only two
-loopback origins and runs a fixed workflow; it does not load arbitrary scripts.
-Native creation and workspace inspection still need their own UI walkthrough.
+private creation, file previews, staged/unstaged Git diffs, local removal and
+restart. It runs three real local service processes with ACP ScriptedAgents,
+a synthetic platform API and actual Python/Git subprocesses. Installation is
+emulated at the service boundary. Its opt-in native hook accepts only loopback
+origins and runs a fixed workflow; it does not load arbitrary scripts.
+
+Pass `--screenshots ../docs/screenshots` to capture the synthetic walkthrough
+with WebKit's own snapshot API. This captures only the application's webview and
+does not require desktop screen-recording access. Normal launches take no snapshots.
 
 Structured Codex billing errors and errors without an automatic retry now show
 a turn warning and a fleet review marker, even if the service reports completion.

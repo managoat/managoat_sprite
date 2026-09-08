@@ -150,7 +150,25 @@ defmodule ManaspritesDesktop.PlatformFixture.Socket do
         # Model the installed Sprite boundary. The independent transport tests
         # below run actual subprocesses; root installer tests execute this setup
         # helper with real Git/bootstrap children and durable remote state.
-        if payload["client_key"], do: Managoat.Sprite.Store.call({:key, payload["client_key"]})
+        if payload["client_key"] do
+          Managoat.Sprite.Store.call({:key, payload["client_key"]})
+
+          if Agent.get(s.fixture, &Map.get(&1, :write_installed_config, false)) do
+            config_root =
+              Path.join(Agent.get(s.fixture, & &1.home), ".local/share/managoat/config")
+
+            Managoat.Sprite.Config.private_write!(
+              Path.join(config_root, "client.key"),
+              payload["client_key"]
+            )
+
+            Managoat.Sprite.Config.private_write!(
+              Path.join(config_root, "config.json"),
+              Jason.encode!(Managoat.Sprite.Config.get())
+            )
+          end
+        end
+
         owner = Agent.get(s.fixture, & &1.owner)
         send(owner, {:setup_received, Map.keys(payload["env"] || %{})})
         {:push, [{:binary, <<1, ~s({"ok":true,"ready":true})::binary>>}, {:binary, <<3, 0>>}], s}

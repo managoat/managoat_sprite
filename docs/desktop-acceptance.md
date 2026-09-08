@@ -19,9 +19,10 @@ the full goal remains incomplete pending live-platform and distribution evidence
 | Workspace files and changes | Local subprocess/Git tests plus live authenticated listing/status and exact checks of a Codex-generated file and Git diff | Verified against live Sprite work |
 | Idle behavior | A live private test Sprite reached `cold`, then Codex resumed the same conversation through the packaged backend and made the expected file change | Live sleep, private cold wake and inference continuation verified |
 | Fleet approval visibility | Two-service overview test and held real ACP answer after HTTP acknowledgement | Verified with the limitation below |
-| Native fleet forms and work controls | Production WebKit drives write-only settings, two real local service attachments, parallel approvals, continuation, interruption, local removal and restart | Core native workflow verified with synthetic services; creation and file inspector UI walkthroughs remain |
+| Native fleet forms and work controls | Production WebKit drives settings, attachment, parallel approvals, continuation, interruption, discovery/private creation, files, staged/unstaged diffs, local removal and restart | Native workflow verified with real local services and Python/Git; platform and installer boundary are synthetic |
+| README screenshots | Three snapshots captured directly from the native app's WebKit view during the synthetic workflow; visually inspected before inclusion | Fleet, file preview and Git diff documented without account data |
 | Reviewable delivery archive | Local ZIP, SHA-256 checksum and metadata report; checksum recomputed; deep strict signature verification passes | Verified local artifact |
-| Hosted macOS CI and Intel build | Workflow and `actionlint` validation exist; source is committed locally and draft PR content is prepared, but the public branch push awaits explicit authorization | Unverified |
+| Hosted macOS CI and Intel build | Workflow and `actionlint` validation exist; public push is authorized and draft PR content is prepared | Hosted result pending |
 | Clean second Mac | Moving the app and removing build tools from runtime PATH passes on the development Mac | Separate-machine evidence missing |
 | Developer ID signing/notarization and published release | Current artifact is ad-hoc signed; no signing/notarization environment configured and no usable code-signing identity found | Incomplete |
 
@@ -87,8 +88,6 @@ No key values, account records or transcripts are included in this evidence.
 Answer a live approval and qualify fresh public URL creation/authentication.
 Claude provider work and simultaneous work by two real providers remain
 unqualified. Local fixtures do not substitute for these results.
-Complete the native creation and workspace-inspector walkthroughs; the native
-fleet probe currently covers settings, attachment and conversation controls.
 
 Distribution still needs the hosted workflow results for both architectures,
 an actual second-Mac launch, and a configured Developer ID/notarization path.

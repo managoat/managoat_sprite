@@ -5,6 +5,11 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::Manager;
 
+#[cfg(target_os = "macos")]
+extern "C" {
+    fn manasprites_snapshot(webview: *mut std::ffi::c_void, destination: *const std::ffi::c_char);
+}
+
 fn main() {
     let bridge = elixirkit::PubSub::listen("tcp://127.0.0.1:0").expect("local bridge unavailable");
     let child = Arc::new(Mutex::new(None::<std::process::Child>));
@@ -33,12 +38,35 @@ fn main() {
                         {
                             let _ = file.write_all(message);
                         }
+                        #[cfg(target_os = "macos")]
+                        if std::env::var("MANASPRITES_DESKTOP_SMOKE_FLEET").is_ok() {
+                            if let Ok(directory) = std::env::var("MANASPRITES_DESKTOP_SMOKE_SCREENSHOTS") {
+                                let filename = match event["workspace"].as_str() {
+                                    Some("Demo fleet") => Some("desktop-fleet.png"),
+                                    Some("Demo files") => Some("desktop-files.png"),
+                                    Some("Demo changes") => Some("desktop-changes.png"),
+                                    _ => None,
+                                };
+                                if let (Some(filename), Some(window)) = (filename, handle.get_webview_window("main")) {
+                                    let path = std::path::Path::new(&directory).join(filename);
+                                    if let Ok(destination) = std::ffi::CString::new(path.to_string_lossy().as_bytes()) {
+                                        std::thread::spawn(move || {
+                                            // Allow the LiveView patch to reach WebKit first.
+                                            std::thread::sleep(Duration::from_millis(500));
+                                            window.with_webview(move |webview| unsafe {
+                                                manasprites_snapshot(webview.inner(), destination.as_ptr());
+                                            }).ok();
+                                        });
+                                    }
+                                }
+                            }
+                        }
                         if let Ok(raw) = std::env::var("MANASPRITES_DESKTOP_SMOKE_FLEET") {
                             if !smoke_fleet_started.swap(true, Ordering::SeqCst) {
                                 // A fixed synthetic workflow, never an arbitrary script.
-                                // Require two plain loopback origins before filling forms.
+                                // Require plain loopback origins before filling forms.
                                 if let Ok(urls) = serde_json::from_str::<Vec<String>>(&raw) {
-                                    let valid = urls.len() == 2 && urls.iter().all(|value| {
+                                    let valid = (2..=3).contains(&urls.len()) && urls.iter().all(|value| {
                                         tauri::Url::parse(value).is_ok_and(|url| {
                                             url.scheme() == "http" && url.host_str() == Some("127.0.0.1")
                                                 && url.port().is_some() && url.path() == "/"

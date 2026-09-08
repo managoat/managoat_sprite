@@ -67,6 +67,8 @@ async function (fixtures) {
     }
     await click("#fleet-nav");
     await wait(() => find("#attention-count")?.textContent.trim() === "2");
+    await report("Demo fleet");
+    await new Promise(resolve => setTimeout(resolve, 1800));
     await select("Beta");
     await click('.permission button[phx-value-option="allow"]:not([disabled])');
     await wait(() => find(".stage")?.textContent.includes("completed"));
@@ -91,6 +93,56 @@ async function (fixtures) {
     await wait(() => document.querySelectorAll("#agent-rail button").length === 1);
     await select("Beta");
     await wait(() => document.querySelectorAll(".stage").length === 2);
+    if (fixtures.length === 3) {
+      stage = "creation credentials";
+      await click("#settings-open");
+      for (const [provider, secret] of [["sprites", "test-org/token/synthetic-secret"], ["openai", "synthetic-native-key"]]) {
+        await submit("#credential-form", {provider, secret});
+        await wait(() => find("#credential-" + provider)?.textContent.includes("Saved"));
+        await wait(() => find('#credential-form input[name="secret"]')?.value === "");
+      }
+      await report("Native fleet: creation keys saved");
+      stage = "discovery and private creation";
+      await click("#fleet-nav");
+      await click("#platform-open");
+      await click("#discover-sprites");
+      await wait(() => document.querySelectorAll(".catalogue-row").length === 2);
+      await submit("#create-sprite-form", {name: "native-created", organization: "test-org", display_name: "Gamma", runtime: "codex", permissions: "ask", url_auth: "sprite"});
+      await wait(() => find('#platform-operations button[phx-click="select_agent"]'), 60000);
+      await select("Gamma");
+      await wait(() => find("#send:not([disabled])"));
+      await report("Native fleet: private creation passed");
+      await submit("#composer", {prompt: "Review the project files and summarize the working tree changes."});
+      await wait(() => find(".stage")?.textContent.includes("completed"));
+      stage = "file inspector";
+      await click("#refresh-inspector");
+      await wait(() => find('#workspace-files button[phx-value-path="proof.txt"]'));
+      if (!find('#workspace-files button[phx-value-path="outside-link"][disabled]')) throw new Error("symlink enabled");
+      await click('#workspace-files button[phx-value-path="proof.txt"]');
+      await wait(() => find("#workspace-file pre")?.textContent === "baseline\nstaged\nunstaged\n");
+      await report("Demo files");
+      await new Promise(resolve => setTimeout(resolve, 1800));
+      stage = "Git inspector";
+      await click("#inspector-tab-changes");
+      await click("#refresh-inspector");
+      await wait(() => find("#workspace-changes")?.textContent.includes("proof.txt"));
+      await click('#workspace-changes button[phx-value-action="diff"]:not([phx-value-staged])');
+      await wait(() => find("#workspace-diff pre")?.textContent.includes("+unstaged"));
+      await report("Demo changes");
+      await new Promise(resolve => setTimeout(resolve, 1800));
+      await click("#inspector-tab-changes");
+      await wait(() => find("#workspace-changes"));
+      await click('#workspace-changes button[phx-value-staged="true"]');
+      await wait(() => find("#workspace-diff pre")?.textContent.includes("+staged"));
+      if (find("#workspace-diff pre").textContent.includes("+unstaged")) throw new Error("mixed staged diff");
+      await select("Beta");
+      await select("Gamma");
+      await wait(() => find("#workspace-files"));
+      await report("Native fleet: inspector passed");
+      await click("#settings-open");
+      await click("#credential-openai button");
+      await wait(() => !find("#credential-openai button"));
+    }
     await report("Native fleet passed");
   } catch (_) {
     await report("Native fleet failed: " + stage);
