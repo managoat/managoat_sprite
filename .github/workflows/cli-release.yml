@@ -1,0 +1,50 @@
+name: CLI Release
+on:
+  push:
+    tags: ['cli-v*']
+permissions:
+  contents: read
+jobs:
+  verify:
+    strategy:
+      matrix:
+        runner: [ubuntu-24.04, macos-14]
+        python: ['3.9', '3.13']
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: test "$(cat scripts/CLI_VERSION)" = "${GITHUB_REF_NAME#cli-v}"
+      - run: python3 -m unittest discover -s test -p '*_test.py' -v
+      - run: sh -n install-cli.sh
+      - run: python3 scripts/build-cli.py
+      - name: Install the packaged CLI
+        run: |
+          prefix=$(mktemp -d)
+          trap 'rm -rf "$prefix"' EXIT
+          MANAGOAT_CLI_ARCHIVE="$PWD/dist/cli/managoat-cli.tar.gz" sh dist/cli/install-cli.sh --prefix "$prefix"
+          test "$("$prefix/bin/managoat" --version)" = "managoat CLI ${GITHUB_REF_NAME#cli-v}"
+          "$prefix/bin/managoat" prompt --help
+          "$prefix/bin/managoat" sprite create --help
+      - uses: actions/upload-artifact@v4
+        if: matrix.runner == 'ubuntu-24.04' && matrix.python == '3.13'
+        with:
+          name: cli-release
+          path: dist/cli/*
+  publish:
+    needs: verify
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: cli-release
+          path: dist/cli
+      - name: Stage draft CLI release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/cli/* --verify-tag --draft --prerelease --title "Managoat CLI ${GITHUB_REF_NAME#cli-v} (preview)" --notes-file docs/cli-release-notes.md

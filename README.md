@@ -14,14 +14,12 @@ exits when the turn finishes. Follow-ups resume the same conversation and files.
 
 ## Setup
 
-You need macOS or Linux, Python 3.9+, Git, an authenticated
+You need macOS or Linux, Python 3.9+, curl, an authenticated
 [Sprites CLI](https://docs.sprites.dev/quickstart/), and `OPENAI_API_KEY` exported.
-Install Managoat from this checkout:
+Install the CLI:
 
 ```sh
-git clone https://github.com/managoat/managoat_sprite.git
-cd managoat_sprite
-python3 scripts/install-cli.py
+curl -fsSL https://github.com/managoat/managoat_sprite/releases/download/cli-v0.1.0/install-cli.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
@@ -71,7 +69,7 @@ app. See the [CLI and HTTP walkthroughs](docs/conversations.md).
 ## Docs and status
 
 The service is a [v0.1.0 preview](https://github.com/managoat/managoat_sprite/releases/tag/v0.1.0);
-the host CLI installs from this checkout. Codex has live inference and continuation
+the [CLI preview](https://github.com/managoat/managoat_sprite/releases/tag/cli-v0.1.0) installs separately. Codex has live inference and continuation
 coverage; Claude still needs live qualification. There is no bundled web UI.
 
 Setup makes no model request; prompts use your inference account. The generated

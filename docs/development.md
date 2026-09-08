@@ -15,6 +15,30 @@ The tests use the real ACP ScriptedAgent and real local subprocesses. Live Sprit
 checks are tracked separately from local test results. The Linux watchdog test
 requires Linux; it is skipped on macOS.
 
+## Build a CLI release
+
+The host CLI requires Python 3.9+ and uses only the standard library. Run it from
+`./bin/managoat`, or install a checkout with `python3 scripts/install-cli.py`.
+
+```sh
+python3 scripts/build-cli.py
+MANAGOAT_CLI_ARCHIVE="$PWD/dist/cli/managoat-cli.tar.gz" sh install-cli.sh --prefix /tmp/managoat-cli
+/tmp/managoat-cli/bin/managoat --version
+```
+
+The build uses an explicit list of source files and reproducible archive metadata.
+It writes the archive, installer, and adjacent SHA-256 files to `dist/cli/`.
+The installer rejects unexpected archive entries, links, checksum failures, and
+version mismatches before changing the installed launcher.
+
+CLI releases use `cli-vVERSION` tags independently of service `vVERSION` tags.
+Update `scripts/CLI_VERSION`, the default in `install-cli.sh`, and the release
+notes and install links together. The CLI release workflow tests Python 3.9 and
+3.13 on macOS and Linux, installs the resulting archive, and stages a draft
+preview release. Publish after those checks and a downloaded-artifact smoke test.
+The regular `mix check` suite also runs the packaged CLI against the real local
+service and ACP ScriptedAgent.
+
 ## Build a Linux release
 
 The release workflow builds on Ubuntu 24.04 with Erlang/OTP 28.1 and Elixir 1.19.2.

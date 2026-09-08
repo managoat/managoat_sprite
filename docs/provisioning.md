@@ -2,28 +2,47 @@
 
 The host CLI creates a Sprite, prepares its workspace, installs the released
 Managoat service, and returns connection details. You do not need to open a Sprite
-console to complete setup. This layer is available from the current source
-checkout; the published `v0.1.0` service archives predate the host CLI.
+console to complete setup. The [CLI release](https://github.com/managoat/managoat_sprite/releases/tag/cli-v0.1.0)
+is distributed separately from the `v0.1.0` Sprite service.
 
 ## Install the host CLI
 
-You need macOS or Linux, Python 3.9+, and an installed, authenticated
+You need macOS or Linux, Python 3.9+, curl, and an installed, authenticated
 [Sprites CLI](https://docs.sprites.dev/cli/commands/). Run `sprite login` to set up
 your account. Managoat uses that login through `sprite api` and `sprite exec`;
 it does not copy the organization token to the agent's computer.
 
-From this repository:
+Install the released CLI:
 
 ```sh
-python3 scripts/install-cli.py
+curl -fsSL https://github.com/managoat/managoat_sprite/releases/download/cli-v0.1.0/install-cli.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
 managoat sprite --help
 ```
 
-Use `--prefix /path/to/prefix` to install elsewhere. The installer refuses to
-replace an unrelated `managoat` executable. It copies the Python CLI into a
-versioned directory, so the command keeps working if you move the checkout.
-For development, `./bin/managoat` runs directly from the repository.
+The installer checks the archive's SHA-256 and installs into `~/.local`. Add
+`~/.local/bin` to your shell profile's `PATH`. `managoat --version` reports the
+CLI version, which is independent of your Sprite service version.
+
+For a different install location:
+
+```sh
+curl -fsSL https://github.com/managoat/managoat_sprite/releases/download/cli-v0.1.0/install-cli.sh | sh -s -- --prefix /path/to/prefix
+```
+
+Repeat the installer to reinstall or update its own launcher. It preserves saved
+connections and keys and refuses to replace an unrelated `managoat` executable.
+Updating the CLI does not upgrade or reconfigure an existing Sprite.
+
+For an offline install, download `install-cli.sh`, `managoat-cli.tar.gz`, and
+`managoat-cli.tar.gz.sha256` from the same release, then run:
+
+```sh
+MANAGOAT_CLI_ARCHIVE="$PWD/managoat-cli.tar.gz" sh install-cli.sh
+```
+
+For development, `./bin/managoat` runs from the repository, or install a checkout
+with `python3 scripts/install-cli.py`. See [development](development.md).
 
 ## Describe your agent
 

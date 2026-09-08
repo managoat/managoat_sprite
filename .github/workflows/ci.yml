@@ -20,5 +20,5 @@ jobs:
       - run: mix deps.get
       - run: mix check
       - run: python3 -m unittest discover -s test -p '*_test.py' -v
-      - run: sh -n install.sh scripts/build-release.sh
+      - run: sh -n install.sh install-cli.sh scripts/build-release.sh
       - run: sh scripts/build-release.sh

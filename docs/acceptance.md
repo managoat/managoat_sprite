@@ -6,6 +6,18 @@ checksums. Publishing this prerelease does not mean the full v0.1 specification
 has passed acceptance. The source is public at
 [managoat/managoat_sprite](https://github.com/managoat/managoat_sprite).
 
+## CLI distribution
+
+The host CLI is packaged separately as `cli-v0.1.0`; the Sprite service remains
+`v0.1.0`. The archive contains only the CLI modules, installer, version, and license.
+
+Local verification on 2026-09-08 covers clean installation outside a checkout,
+repeat installation, switching to another CLI version, preservation of unrelated
+executables, and rejection of bad checksums, unsafe archive entries, and version
+mismatches. The actual packaged CLI also runs the HTTP/ACP conversation integration
+suite. Release workflow and downloaded-artifact results are recorded below after
+publication.
+
 ## Conversation CLI (current source checkout)
 
 The host CLI now provides `prompt`, `prompt --continue`, `conversations`, and

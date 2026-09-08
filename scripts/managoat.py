@@ -410,6 +410,9 @@ def main():
         from chat import main as chat_main
         return chat_main(sys.argv[1:])
     parser = argparse.ArgumentParser(prog='managoat')
+    version_file = Path(__file__).with_name('CLI_VERSION')
+    cli_version = version_file.read_text().strip() if version_file.exists() else 'development'
+    parser.add_argument('--version', action='version', version='managoat CLI ' + cli_version)
     sub = parser.add_subparsers(dest='command', required=True)
     sub.add_parser('sprite', help='create or inspect a Sprite from your computer')
     sub.add_parser('prompt', help='send a prompt and stream the response')

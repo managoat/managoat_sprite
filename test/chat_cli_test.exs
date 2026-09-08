@@ -18,7 +18,13 @@ defmodule Managoat.Sprite.ChatCLITest do
       })
     )
 
-    {_, 0} = System.cmd("python3", ["scripts/install-cli.py", "--prefix", prefix])
+    artifacts = Path.join(root, "cli-release")
+    {_, 0} = System.cmd("python3", ["scripts/build-cli.py", "--output", artifacts])
+
+    {_, 0} =
+      System.cmd("sh", [Path.join(artifacts, "install-cli.sh"), "--prefix", prefix],
+        env: [{"MANAGOAT_CLI_ARCHIVE", Path.join(artifacts, "managoat-cli.tar.gz")}]
+      )
 
     script = """
     import sys
