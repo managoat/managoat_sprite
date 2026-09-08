@@ -16,8 +16,8 @@ conversation engine. The host CLI also provides `prompt`, `conversations`, and
 Creating a conversation never provisions another machine. Ending or deleting a conversation never destroys the Sprite or removes the operator's workspace.
 
 Host product and executable: `manasprites`. The Sprite service retains its
-`managoat` operator command. Repository and OTP application: `managoat_sprite`.
-The source is published at https://github.com/managoat/managoat_sprite. The
+`managoat` operator command. Repository: `manasprites`. OTP application: `managoat_sprite`.
+The source is published at https://github.com/managoat/manasprites. The
 custom distribution URL below remains proposed. The v0.1.0 preview is distributed
 through GitHub Releases; see [manual-install.md](manual-install.md) for the working installer command and
 acceptance.md for qualification status.

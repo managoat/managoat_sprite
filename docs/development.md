@@ -45,8 +45,8 @@ The release workflow builds on Ubuntu 24.04 with Erlang/OTP 28.1 and Elixir 1.19
 Install those tools, Git, and a C/C++ build toolchain on your Linux build machine:
 
 ```sh
-git clone https://github.com/managoat/managoat_sprite.git
-cd managoat_sprite
+git clone https://github.com/managoat/manasprites.git
+cd manasprites
 mix deps.get
 mix check
 python3 -m unittest discover -s test -p '*_test.py' -v

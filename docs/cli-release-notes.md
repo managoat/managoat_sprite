@@ -5,7 +5,7 @@ The host command is now `manasprites`, freeing the `managoat` name for other too
 Install on macOS or Linux without cloning the repository:
 
 ```sh
-curl -fsSL https://github.com/managoat/managoat_sprite/releases/download/cli-v0.2.0/install-cli.sh | sh
+curl -fsSL https://github.com/managoat/manasprites/releases/download/cli-v0.2.0/install-cli.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
@@ -36,6 +36,6 @@ remains pinned to `v0.1.0`. It does not update an existing agent or service.
 Tool permission requests are displayed; answering them still uses the HTTP API.
 Codex has live inference qualification; Claude qualification remains pending.
 
-See [setup](https://github.com/managoat/managoat_sprite/tree/cli-v0.2.0#setup),
-[configuration](https://github.com/managoat/managoat_sprite/blob/cli-v0.2.0/docs/provisioning.md),
-and the [acceptance record](https://github.com/managoat/managoat_sprite/blob/main/docs/acceptance.md).
+See [setup](https://github.com/managoat/manasprites/tree/cli-v0.2.0#setup),
+[configuration](https://github.com/managoat/manasprites/blob/cli-v0.2.0/docs/provisioning.md),
+and the [acceptance record](https://github.com/managoat/manasprites/blob/main/docs/acceptance.md).

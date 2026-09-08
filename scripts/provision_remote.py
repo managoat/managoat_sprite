@@ -182,7 +182,7 @@ def install_service(c, root, state, values, client_key):
             file.chmod(0o600)
         script = root / 'install.sh'
         run_step(['curl', '-fsSL', '--proto', '=https', '--tlsv1.2',
-                  f"https://raw.githubusercontent.com/managoat/managoat_sprite/v{c['release']}/install.sh",
+                  f"https://raw.githubusercontent.com/managoat/manasprites/v{c['release']}/install.sh",
                   '-o', str(script)], root / 'logs/download.log', timeout=120)
         credential = 'OPENAI_API_KEY' if c['agent']['runtime'] == 'codex' else 'ANTHROPIC_API_KEY'
         env = dict(os.environ, MANAGOAT_API_KEY=client_key)

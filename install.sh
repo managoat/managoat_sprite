@@ -43,7 +43,7 @@ if [ -n "${MANAGOAT_ARCHIVE:-}" ]; then
   cp "$MANAGOAT_ARCHIVE" "$stage/$archive"
   cp "$MANAGOAT_ARCHIVE.sha256" "$stage/$archive.sha256"
 else
-  base="https://github.com/managoat/managoat_sprite/releases/download/v$version"
+  base="https://github.com/managoat/manasprites/releases/download/v$version"
   curl -fL --retry 3 "$base/$archive" -o "$stage/$archive"
   curl -fL --retry 3 "$base/$archive.sha256" -o "$stage/$archive.sha256"
 fi

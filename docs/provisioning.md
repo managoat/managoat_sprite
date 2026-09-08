@@ -2,7 +2,7 @@
 
 The `manasprites` CLI creates a Sprite, prepares its workspace, installs the released
 Managoat service, and returns connection details. You do not need to open a Sprite
-console to complete setup. The [CLI release](https://github.com/managoat/managoat_sprite/releases/tag/cli-v0.2.0)
+console to complete setup. The [CLI release](https://github.com/managoat/manasprites/releases/tag/cli-v0.2.0)
 is distributed separately from the `v0.1.0` Sprite service.
 
 ## Install the host CLI
@@ -15,7 +15,7 @@ it does not copy the organization token to the agent's computer.
 Install the released CLI:
 
 ```sh
-curl -fsSL https://github.com/managoat/managoat_sprite/releases/download/cli-v0.2.0/install-cli.sh | sh
+curl -fsSL https://github.com/managoat/manasprites/releases/download/cli-v0.2.0/install-cli.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
 manasprites sprite --help
 ```
@@ -27,7 +27,7 @@ CLI version, which is independent of your Sprite service version.
 For a different install location:
 
 ```sh
-curl -fsSL https://github.com/managoat/managoat_sprite/releases/download/cli-v0.2.0/install-cli.sh | sh -s -- --prefix /path/to/prefix
+curl -fsSL https://github.com/managoat/manasprites/releases/download/cli-v0.2.0/install-cli.sh | sh -s -- --prefix /path/to/prefix
 ```
 
 The executable is `manasprites`. Repeat the installer to reinstall or update its

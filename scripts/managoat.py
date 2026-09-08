@@ -312,7 +312,7 @@ def upgrade(args):
         raise RuntimeError('upgrade requires a valid --version')
     with operation_lock():
         previous = CURRENT.resolve()
-        source = f'https://raw.githubusercontent.com/managoat/managoat_sprite/v{args.version}/install.sh'
+        source = f'https://raw.githubusercontent.com/managoat/manasprites/v{args.version}/install.sh'
         with urllib.request.urlopen(source, timeout=30) as response:
             script = response.read()
         with tempfile.NamedTemporaryFile() as handle:

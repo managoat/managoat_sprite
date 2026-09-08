@@ -33,7 +33,7 @@ if [ -n "${MANASPRITES_ARCHIVE:-}" ]; then
   cp "$MANASPRITES_ARCHIVE.sha256" "$stage/$archive.sha256"
 else
   command -v curl >/dev/null || { echo 'Install curl first.' >&2; exit 1; }
-  base="https://github.com/managoat/managoat_sprite/releases/download/cli-v$version"
+  base="https://github.com/managoat/manasprites/releases/download/cli-v$version"
   curl -fsSL --retry 3 "$base/$archive" -o "$stage/$archive"
   curl -fsSL --retry 3 "$base/$archive.sha256" -o "$stage/$archive.sha256"
 fi

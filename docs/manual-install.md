@@ -48,7 +48,7 @@ for clients of your conversations API.
 With `OPENAI_API_KEY` exported, run inside the Sprite:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/managoat/managoat_sprite/v0.1.0/install.sh | sh -s -- \
+curl -fsSL https://raw.githubusercontent.com/managoat/manasprites/v0.1.0/install.sh | sh -s -- \
   --runtime codex --credential-env OPENAI_API_KEY --workspace /home/sprite/project
 
 export PATH="$HOME/.local/bin:$PATH"

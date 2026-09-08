@@ -8,7 +8,7 @@ passed the same live qualification.
 Inside your Sprite, with `OPENAI_API_KEY` exported:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/managoat/managoat_sprite/v0.1.0/install.sh | sh -s -- \
+curl -fsSL https://raw.githubusercontent.com/managoat/manasprites/v0.1.0/install.sh | sh -s -- \
   --runtime codex --credential-env OPENAI_API_KEY --workspace /home/sprite/project
 ```
 
@@ -27,6 +27,6 @@ streaming, browser UI integration, observed idle sleep/cold wake, and the full
 recovery/resource fault matrix. Linux ARM64 builds and tests do not establish
 live ARM64 Sprite qualification.
 
-See the [README](https://github.com/managoat/managoat_sprite#setup) for setup and
-[acceptance record](https://github.com/managoat/managoat_sprite/blob/main/docs/acceptance.md)
+See the [README](https://github.com/managoat/manasprites#setup) for setup and
+[acceptance record](https://github.com/managoat/manasprites/blob/main/docs/acceptance.md)
 for validation evidence and remaining work.

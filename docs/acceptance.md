@@ -1,14 +1,24 @@
 # Acceptance record
 
-Updated 2026-09-08. [v0.1.0](https://github.com/managoat/managoat_sprite/releases/tag/v0.1.0)
+Updated 2026-09-08. [v0.1.0](https://github.com/managoat/manasprites/releases/tag/v0.1.0)
 is the initial preview distribution, with Linux AMD64 and ARM64 archives and
 checksums. Publishing this prerelease does not mean the full v0.1 specification
 has passed acceptance. The source is public at
-[managoat/managoat_sprite](https://github.com/managoat/managoat_sprite).
+[managoat/manasprites](https://github.com/managoat/manasprites).
+
+## Repository rename
+
+The repository is now [managoat/manasprites](https://github.com/managoat/manasprites).
+The README, examples, release notes, and source download URLs use the new name.
+The published CLI `0.2.0` installer was downloaded through the new repository URL
+and installed successfully in a fresh directory. Its existing asset downloads and
+pinned service bootstrap URLs still resolve through GitHub's redirects. Git access
+through the new origin also passed. The installer/CLI suite passed 47 tests on
+macOS, with the Linux-only watchdog skipped.
 
 ## Manasprites CLI rename
 
-[CLI `0.2.0`](https://github.com/managoat/managoat_sprite/releases/tag/cli-v0.2.0) uses the `manasprites` executable and `manasprites.tar.gz` archive.
+[CLI `0.2.0`](https://github.com/managoat/manasprites/releases/tag/cli-v0.2.0) uses the `manasprites` executable and `manasprites.tar.gz` archive.
 Its host entry point is separate from the Sprite service's operator command.
 New host state lives under `~/.local/share/manasprites`, with `MANASPRITES_ROOT`
 as the override. This is a clean rename, with no command alias or Sprite migration.
@@ -17,9 +27,9 @@ Local checks exercise the renamed installed package against the real HTTP servic
 and ACP ScriptedAgent, including prompt, continuation, list, and watch. Installer
 checks verify that a fresh installation creates only `manasprites` and that an
 existing unrelated `managoat` executable still runs unchanged after installation.
-The [release workflow](https://github.com/managoat/managoat_sprite/actions/runs/34201336513)
+The [release workflow](https://github.com/managoat/manasprites/actions/runs/34201336513)
 passed 31 host tests on macOS and Linux with Python 3.9 and 3.13.
-[Full CI](https://github.com/managoat/managoat_sprite/actions/runs/34201336541)
+[Full CI](https://github.com/managoat/manasprites/actions/runs/34201336541)
 passed all 30 Elixir tests, 48 Python tests on Linux, and the service build.
 The downloaded release archive matched the local reproducible build. After
 publication, the public installer downloaded and installed `manasprites 0.2.0`
@@ -31,16 +41,16 @@ Historical verification for the earlier CLI name follows below.
 
 ## CLI distribution
 
-The [CLI 0.1.0 preview](https://github.com/managoat/managoat_sprite/releases/tag/cli-v0.1.0)
+The [CLI 0.1.0 preview](https://github.com/managoat/manasprites/releases/tag/cli-v0.1.0)
 is published separately from the Sprite service `v0.1.0`. Its 22 KiB archive
 contains only CLI modules, the installer, version, and license.
 
 Verified on 2026-09-08:
 
-- The [CLI release workflow](https://github.com/managoat/managoat_sprite/actions/runs/34200456905)
+- The [CLI release workflow](https://github.com/managoat/manasprites/actions/runs/34200456905)
   passed all 30 host CLI tests on macOS and Linux with Python 3.9 and 3.13, then
   installed the archive on each platform and verified version and command help.
-- [Full CI for the tagged source](https://github.com/managoat/managoat_sprite/actions/runs/34200242899)
+- [Full CI for the tagged source](https://github.com/managoat/manasprites/actions/runs/34200242899)
   passed `mix check` (30 tests), all 47 Python tests on Linux, and the service
   release build. The packaged host CLI runs against the real local HTTP service
   and ACP ScriptedAgent in the Elixir integration suite.
@@ -125,7 +135,7 @@ inspection and explicit retry.
 
 ## v0.1.0 distribution verification
 
-The [release workflow](https://github.com/managoat/managoat_sprite/actions/runs/34192825292)
+The [release workflow](https://github.com/managoat/manasprites/actions/runs/34192825292)
 passed on Linux AMD64 and ARM64 at source commit `9d4deef`. Each architecture ran
 `mix check` (27 tests), all 17 Python management/watchdog tests, and an extracted
 release runtime check. Archive versions matched tag `v0.1.0`; both downloaded

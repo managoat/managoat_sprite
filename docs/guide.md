@@ -11,12 +11,12 @@ Sprite; the host command on your computer is `manasprites`. For prerequisites an
 the [manual installation walkthrough](manual-install.md).
 
 The Codex path has passed installation and real inference checks on a clean
-Sprite, including the existing chat template's HTTP/SSE client. [v0.1.0](https://github.com/managoat/managoat_sprite/releases/tag/v0.1.0)
+Sprite, including the existing chat template's HTTP/SSE client. [v0.1.0](https://github.com/managoat/manasprites/releases/tag/v0.1.0)
 provides preview release archives for Linux AMD64 and ARM64. Claude qualification
 remains pending. Run inside your Sprite with an inference key already exported:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/managoat/managoat_sprite/v0.1.0/install.sh | sh -s -- \
+curl -fsSL https://raw.githubusercontent.com/managoat/manasprites/v0.1.0/install.sh | sh -s -- \
   --runtime codex --credential-env OPENAI_API_KEY --workspace /home/sprite/project
 ```
 

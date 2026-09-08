@@ -19,7 +19,7 @@ You need macOS or Linux, Python 3.9+, curl, an authenticated
 Install the CLI:
 
 ```sh
-curl -fsSL https://github.com/managoat/managoat_sprite/releases/download/cli-v0.2.0/install-cli.sh | sh
+curl -fsSL https://github.com/managoat/manasprites/releases/download/cli-v0.2.0/install-cli.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
@@ -68,8 +68,8 @@ app. See the [CLI and HTTP walkthroughs](docs/conversations.md).
 
 ## Docs and status
 
-The service is a [v0.1.0 preview](https://github.com/managoat/managoat_sprite/releases/tag/v0.1.0);
-the [CLI preview](https://github.com/managoat/managoat_sprite/releases/tag/cli-v0.2.0) installs separately. Codex has live inference and continuation
+The service is a [v0.1.0 preview](https://github.com/managoat/manasprites/releases/tag/v0.1.0);
+the [CLI preview](https://github.com/managoat/manasprites/releases/tag/cli-v0.2.0) installs separately. Codex has live inference and continuation
 coverage; Claude still needs live qualification. There is no bundled web UI.
 
 Setup makes no model request; prompts use your inference account. The generated
