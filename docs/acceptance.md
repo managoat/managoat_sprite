@@ -8,15 +8,35 @@ has passed acceptance. The source is public at
 
 ## CLI distribution
 
-The host CLI is packaged separately as `cli-v0.1.0`; the Sprite service remains
-`v0.1.0`. The archive contains only the CLI modules, installer, version, and license.
+The [CLI 0.1.0 preview](https://github.com/managoat/managoat_sprite/releases/tag/cli-v0.1.0)
+is published separately from the Sprite service `v0.1.0`. Its 22 KiB archive
+contains only CLI modules, the installer, version, and license.
 
-Local verification on 2026-09-08 covers clean installation outside a checkout,
-repeat installation, switching to another CLI version, preservation of unrelated
-executables, and rejection of bad checksums, unsafe archive entries, and version
-mismatches. The actual packaged CLI also runs the HTTP/ACP conversation integration
-suite. Release workflow and downloaded-artifact results are recorded below after
-publication.
+Verified on 2026-09-08:
+
+- The [CLI release workflow](https://github.com/managoat/managoat_sprite/actions/runs/34200456905)
+  passed all 30 host CLI tests on macOS and Linux with Python 3.9 and 3.13, then
+  installed the archive on each platform and verified version and command help.
+- [Full CI for the tagged source](https://github.com/managoat/managoat_sprite/actions/runs/34200242899)
+  passed `mix check` (30 tests), all 47 Python tests on Linux, and the service
+  release build. The packaged host CLI runs against the real local HTTP service
+  and ACP ScriptedAgent in the Elixir integration suite.
+- Archive installation tests cover clean installation outside a checkout, repeat
+  installation, switching CLI versions, preservation of unrelated executables,
+  and rejection of bad checksums, unsafe entries, and version mismatches.
+- The downloaded draft archive matched the local reproducible build and installed
+  successfully. After publication, the public installer URL downloaded the archive
+  and checksum without GitHub authentication and installed into a fresh macOS
+  directory. `managoat --version`, `sprite create --help`, and `prompt --help` passed.
+
+The host matrix excludes service-only lifecycle tests, which retain their full
+Linux CI coverage and newer Python tar-extraction requirements. No new Sprite
+was created and no inference request was made for this CLI distribution check.
+
+| Asset | SHA-256 |
+|---|---|
+| `managoat-cli.tar.gz` | `0b5d4e18d634e6d86c84f8d92448556f97b9b8eaa2d21e4fb5e47c2f2dd318de` |
+| `install-cli.sh` | `82e174a504d0d9de19212525e6f829586dc98fe539bed3c8d43c7b77009e74f3` |
 
 ## Conversation CLI (current source checkout)
 
@@ -44,7 +64,8 @@ work. Use the existing HTTP permission endpoint for an `ask` policy.
 
 The host CLI is implemented after the `v0.1.0` service release. It is available
 from the checkout via `bin/managoat` or `scripts/install-cli.py`; it is not part
-of the existing release archives. See [provisioning.md](provisioning.md).
+of the original `v0.1.0` service archives. It is now distributed in the separate
+CLI release above. See [provisioning.md](provisioning.md).
 
 Executed checks on 2026-09-08:
 
