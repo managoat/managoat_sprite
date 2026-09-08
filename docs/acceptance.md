@@ -6,6 +6,28 @@ checksums. Publishing this prerelease does not mean the full v0.1 specification
 has passed acceptance. The source is public at
 [managoat/managoat_sprite](https://github.com/managoat/managoat_sprite).
 
+## Conversation CLI (current source checkout)
+
+The host CLI now provides `prompt`, `prompt --continue`, `conversations`, and
+`watch`, using saved provisioning connection details. These commands work against
+the existing service API and do not require a new service release.
+
+Executed locally on 2026-09-08:
+
+- `mix check`: 30 tests pass. New integration tests install the actual host CLI
+  into a temporary prefix, run it as a subprocess against a real Bandit HTTP
+  server, and drive the real ACP ScriptedAgent. They verify creation, follow-up
+  session resume, tool/text rendering, listing, watching without another turn,
+  blank-prompt rejection, and nonzero exit for an interrupted turn.
+- Python installer/CLI suite: 40 pass; the Linux watchdog is skipped on macOS.
+  New HTTP fixtures exercise stdin prompts, cursor-based stream reconnection
+  without duplicate output or prompt submission, ambiguous submission handling,
+  redirect refusal, private tunnel selection, SSE parsing, and JSON failure events.
+
+No new live Sprite or paid inference check was performed for these CLI commands.
+Permission requests are displayed; answering them from the CLI remains future
+work. Use the existing HTTP permission endpoint for an `ask` policy.
+
 ## Host provisioning (current source checkout)
 
 The host CLI is implemented after the `v0.1.0` service release. It is available

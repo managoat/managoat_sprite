@@ -17,7 +17,7 @@ def install(prefix):
     if launcher.exists() or launcher.is_symlink():
         if launcher.is_symlink() or MARKER not in launcher.read_text():
             raise RuntimeError('managoat already exists at this prefix; choose a different --prefix')
-    files = ['managoat.py', 'provision.py', 'provision_remote.py']
+    files = ['managoat.py', 'provision.py', 'provision_remote.py', 'chat.py']
     digest = hashlib.sha256(b''.join((source / name).read_bytes() for name in files)).hexdigest()[:16]
     library = prefix / 'lib/managoat-cli' / digest
     library.parent.mkdir(parents=True, exist_ok=True)

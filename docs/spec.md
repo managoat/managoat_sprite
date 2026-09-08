@@ -11,12 +11,14 @@ host-side provisioning CLI can now create that Sprite first, clone a repository,
 run explicit bootstrap commands, install a pinned service release, and verify
 connection details. Its configuration and recovery contract are documented in
 [provisioning.md](provisioning.md). These setup operations run outside the
-conversation engine. Creating a conversation never provisions another machine. Ending or deleting a conversation never destroys the Sprite or removes the operator's workspace.
+conversation engine. The host CLI also provides `prompt`, `conversations`, and
+`watch` commands over the service API; see [conversations.md](conversations.md).
+Creating a conversation never provisions another machine. Ending or deleting a conversation never destroys the Sprite or removes the operator's workspace.
 
 Product and executable name: `managoat`. Repository and OTP application: `managoat_sprite`.
 The source is published at https://github.com/managoat/managoat_sprite. The
 custom distribution URL below remains proposed. The v0.1.0 preview is distributed
-through GitHub Releases; see README.md for the working installer command and
+through GitHub Releases; see [manual-install.md](manual-install.md) for the working installer command and
 acceptance.md for qualification status.
 
 ## The installation experience

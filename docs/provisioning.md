@@ -124,8 +124,16 @@ curl -fsS "$BASE_URL/api/conversations" \
   -d '{"prompt":"Inspect this project and explain what we should work on next."}'
 ```
 
-Use the [README conversation examples](../README.md#example-explore-a-project-then-run-its-tests)
-to stream output and send follow-ups.
+From the directory containing `agent.json`, the host CLI can also load the saved
+connection details and stream a conversation directly:
+
+```sh
+managoat prompt "Inspect this project and explain what we should work on next."
+managoat prompt --continue "Start with the first improvement and run its tests."
+```
+
+Use the [conversation walkthroughs](conversations.md) for CLI options and HTTP
+examples.
 
 With `url_auth: sprite`, the result reports local readiness and
 `external_access: unverified`, and includes a `proxy_command`. Run that command
