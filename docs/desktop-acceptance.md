@@ -21,7 +21,7 @@ the full goal remains incomplete pending live-platform and distribution evidence
 | Fleet approval visibility | Two-service overview test and held real ACP answer after HTTP acknowledgement | Verified with the limitation below |
 | Native fleet forms and work controls | Production WebKit drives write-only settings, two real local service attachments, parallel approvals, continuation, interruption, local removal and restart | Core native workflow verified with synthetic services; creation and file inspector UI walkthroughs remain |
 | Reviewable delivery archive | Local ZIP, SHA-256 checksum and metadata report; checksum recomputed; deep strict signature verification passes | Verified local artifact |
-| Hosted macOS CI and Intel build | Workflow and `actionlint` validation exist; no hosted result for this uncommitted desktop source | Unverified |
+| Hosted macOS CI and Intel build | Workflow and `actionlint` validation exist; source is committed locally and draft PR content is prepared, but the public branch push awaits explicit authorization | Unverified |
 | Clean second Mac | Moving the app and removing build tools from runtime PATH passes on the development Mac | Separate-machine evidence missing |
 | Developer ID signing/notarization and published release | Current artifact is ad-hoc signed; no signing/notarization environment configured and no usable code-signing identity found | Incomplete |
 
