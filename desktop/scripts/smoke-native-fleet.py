@@ -85,6 +85,8 @@ def run(app, screenshots=None):
                 time.sleep(.1)
             else:
                 raise AssertionError('Native UI walkthrough timed out')
+            clipboard = subprocess.run(['/usr/bin/pbpaste'], text=True, capture_output=True, check=True).stdout
+            assert clipboard == 'https://agent.example/.well-known/agent-card.json', 'Native Copy URL clipboard mismatch'
             if screenshots:
                 for name in ('desktop-fleet.png', 'desktop-files.png', 'desktop-changes.png'):
                     smoke.wait_for(lambda: (screenshots / name).is_file())

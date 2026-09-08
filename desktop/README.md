@@ -203,9 +203,10 @@ work, independent approvals and interruption, agent switching, isolated history,
 and cleanup of both process groups and listeners.
 An additional test holds the real ACP answer write after HTTP acknowledgement:
 the approval marker clears and buttons disable while the turn remains active.
-Approval markers use cached requests and this app's acknowledged answers. The
-current service does not expose another client's resolution during an active
-turn, so that marker may remain until the turn finishes.
+Approval markers use cached requests and this app's acknowledged answers. A2A-capable
+services publish durable permission-resolution events, so refreshed caches clear
+another client's answer during an active turn. Older service versions may retain
+the marker until the turn finishes.
 
 Ad-hoc signing is for local builds. Developer ID signing/notarization remains a separate distribution gate;
 hosted Apple Silicon and cross-machine launch checks pass, but this is not a published

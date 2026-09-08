@@ -1,6 +1,9 @@
 # A2A access to Sprite agents
 
-Handoff brief, 2026-09-08. **Proposed; not implemented.**
+Handoff brief, 2026-09-08. **Implemented and live-qualified; release publication pending.**
+
+See [a2a.md](a2a.md) for the concrete wire/configuration contract and the
+implementation record below for verified behavior and remaining work.
 
 ## Outcome
 
@@ -9,7 +12,7 @@ that URL plus separately configured credentials to another agent. That agent
 can submit work, follow progress, retrieve results, and continue the conversation.
 The Sprite remains reachable when the laptop app is closed.
 
-## What exists today
+## Baseline before this implementation
 
 The service exposes the Fountain conversations API, authenticated HTTP/SSE,
 durable conversations/turns/events, permission decisions, cancellation, and
@@ -148,3 +151,55 @@ payloads or assume existing REST SSE is already A2A-compatible.
 - Qualify a disposable Sprite with an external A2A client while the laptop app
   is closed, including one paid coding task and owner approval after reopening.
   Record sanitized evidence and remove test resources and credentials.
+
+## Implementation and qualification record
+
+Implemented in the 0.1.2 source candidate:
+
+- A2A 1.0 JSON-RPC operations, sanitized anonymous card, opt-in configuration,
+  authenticated capabilities, strict text input, version negotiation and errors.
+- Atomic message mapping/tombstones, bounded durable task projections, task-only
+  history/artifacts, cursor pagination, blocking and streamed execution.
+- Turn-specific cancellation with a record-before-dispatch cancellation barrier;
+  provider errors remain failures. Durable permission-resolution events clear
+  waits in both A2A and the refreshed desktop cache.
+- Desktop discovery fetched on connection/explicit refresh, URL-only copying,
+  private-access guidance, disabled/missing-origin/older-service states.
+- Official v1.0.1 schema and official Python SDK 1.0.3 interoperability fixtures.
+
+Verified locally on macOS: 41 service tests and 25 desktop tests, including
+actual official-client HTTP/SSE requests through an ACP ScriptedAgent subprocess;
+duplicate/conflict/busy/context tests; cancellation,
+owner allow/deny/timeout, provider failure, engine restart and output limits.
+The native WebKit fleet workflow passed, including actual system-clipboard
+verification of Copy URL, with synthetic credentials and local services.
+Installer/CLI checks passed 48 tests (the Linux subreaper check skips on macOS).
+
+Verified on a disposable AMD64 Sprite: all 41 service tests and 48 installer/CLI
+tests passed, including the Linux subprocess cleanup check. Built and installed
+the 0.1.2 candidate with the native Linux toolchain. Initial A2A disablement,
+unverified-origin configuration, service-key preservation and existing workspace
+preservation passed. Private platform ingress redirected both anonymous and
+service-bearer-only callers to platform login. After explicitly configuring public
+ingress on this disposable instance, anonymous sanitized card discovery passed
+and unauthenticated task access was refused.
+
+The official Python SDK discovered the external HTTPS card and submitted a paid
+Codex task while the native laptop app was closed. Reopening and refreshing the
+app displayed that same task in normal conversation history. Two allow-once
+desktop decisions approved the test-file append and read; the A2A task reported
+the owner wait and then completed. The external SSE client received 16 events,
+including the terminal update. The exact file contents and preexisting workspace
+were verified. With the laptop app closed again, a service restart preserved the
+completed task and text artifact. A new task in the same context recalled the
+prior result without tools, and ListTasks returned both tasks.
+
+The disposable Sprite was destroyed and its absence verified. Temporary test
+credentials, transcripts and the isolated desktop profile were removed; existing
+user credentials were preserved. No account details or live endpoints are stored
+in this qualification record.
+
+Remaining: publish release artifacts through the existing AMD64/ARM64 workflow,
+then advance the installer default and desktop provisioning pin. The published
+pin remains 0.1.1; this source candidate is not yet available through the default
+installer. Native Sprite qualification does not establish ARM64 live behavior.

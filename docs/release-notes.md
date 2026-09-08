@@ -1,3 +1,45 @@
+# Sprite service 0.1.2 preview
+
+Adds an opt-in A2A 1.0 JSON-RPC adapter and sanitized agent card, using the
+existing durable conversation engine and owner bearer key. External agents can
+submit text tasks, stream updates, retrieve/list results, cancel a specific turn,
+and follow up in the same context. Message IDs deduplicate atomically; task
+artifacts contain only normalized text from the requested turn.
+
+Known provider errors now fail the service turn even if ACP later reports
+completion. Cancellation records intent before a pending prompt can be written.
+Durable approval-resolution events allow other clients to clear owner waits.
+
+See [configuration and wire semantics](a2a.md) and the
+[qualification record](a2a-brief.md#implementation-and-qualification-record).
+A2A remains off by default. Trusted peers use the existing full-authority service
+key, configured separately from the card URL. Private ingress requires network
+access; no platform access is changed by enabling discovery or copying a URL.
+
+The schema migration is additive. A rollback to a pre-A2A service also requires
+removing its unsupported A2A configuration while offline.
+
+Qualification passed 41 service tests, 25 desktop tests, 48 installer/CLI tests,
+and the native macOS workflow with actual clipboard verification. A disposable
+AMD64 Sprite passed paid Codex execution through the official A2A Python SDK with
+the laptop app closed, owner approvals after reopening, external SSE completion,
+and same-context follow-up after a service restart. Test resources and temporary
+credentials were removed.
+
+Fresh installs can select this release explicitly:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/managoat/manasprites/v0.1.2/install.sh | sh -s -- \
+  --version 0.1.2 --runtime codex --credential-env OPENAI_API_KEY --workspace /home/sprite/project
+```
+
+For an idle existing installation, use `managoat upgrade --version 0.1.2`.
+A2A requires separate explicit configuration after installation. Linux ARM64
+build tests do not establish live ARM64 Sprite qualification. Claude inference
+parity and signed desktop distribution remain open.
+
+---
+
 # Sprite service 0.1.1 preview
 
 Codex tool escalation requests now reach the service's configured permission

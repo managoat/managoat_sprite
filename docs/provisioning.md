@@ -206,3 +206,20 @@ and restoring lost local provisioning records are separate operations. Use the
 [service management commands](guide.md#persistence-and-operation) for the installed
 service. Existing `v0.1.0` backups omit credentials, including imported environment
 values; supply those again when restoring.
+
+## A2A access after provisioning
+
+The 0.1.2 source candidate adds opt-in A2A to the installed service. Provisioning
+continues to use its pinned published release and existing URL-auth defaults.
+After installing an A2A-capable release, verify the platform-returned HTTPS
+origin against the installed service and apply the complete service configuration
+with managoat configure --file PATH, including the a2a object documented in
+[a2a.md](a2a.md). This preserves the service key and conversation state.
+origin_verified records the operator's verification; it performs no network
+probe. Changing a2a.ingress describes existing platform access and does not
+change it. Private callers still need their own platform/network access.
+
+A2A is never enabled implicitly by creating a Sprite, connecting the desktop or
+copying an agent card URL. The desktop refreshes /api/capabilities explicitly
+to display the configured URL and access requirements; older releases show
+Upgrade required. Card URLs never include the service key or organization token.

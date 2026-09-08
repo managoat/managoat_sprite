@@ -11,7 +11,7 @@ defmodule Managoat.Sprite.Config do
 
   def validate!(c) do
     allowed =
-      ~w(runtime workspace model name permissions cors_origins port host permission_timeout_seconds turn_timeout_seconds max_request_bytes max_output_bytes disk_reserve_bytes task_socket task_required credential_env)
+      ~w(runtime workspace model name permissions cors_origins port host permission_timeout_seconds turn_timeout_seconds max_request_bytes max_output_bytes disk_reserve_bytes task_socket task_required credential_env a2a)
 
     unknown = Map.keys(c) -- allowed
     if unknown != [], do: raise(ArgumentError, "unknown config keys: #{Enum.join(unknown, ", ")}")
@@ -23,6 +23,12 @@ defmodule Managoat.Sprite.Config do
       do: raise(ArgumentError, "workspace must be an absolute path")
 
     defaults = %{
+      "a2a" => %{
+        "enabled" => false,
+        "external_origin" => nil,
+        "origin_verified" => false,
+        "ingress" => "private"
+      },
       "model" => nil,
       "name" => "Workspace agent",
       "permissions" => %{"default" => "auto_allow"},
@@ -77,7 +83,7 @@ defmodule Managoat.Sprite.Config do
     unless is_integer(c["disk_reserve_bytes"]) and c["disk_reserve_bytes"] >= 0,
       do: raise(ArgumentError, "invalid disk reserve")
 
-    c
+    Map.put(c, "a2a", Managoat.Sprite.A2A.Card.validate!(c["a2a"]))
   end
 
   def get, do: Application.fetch_env!(:managoat_sprite, :config)

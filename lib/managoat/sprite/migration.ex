@@ -78,3 +78,20 @@ defmodule Managoat.Sprite.Repo.Migrations.AgentConfigurations do
     end
   end
 end
+
+defmodule Managoat.Sprite.Repo.Migrations.A2ATasks do
+  use Ecto.Migration
+
+  def change do
+    create table(:a2a_tasks, primary_key: false) do
+      add(:id, references(:turns, type: :text, on_delete: :delete_all), primary_key: true)
+      add(:message_id, :text, null: false)
+      add(:text, :text, null: false, default: "")
+      add(:truncated, :boolean, null: false, default: false)
+      add(:updated_at, :text, null: false)
+      add(:event_id, :integer, null: false, default: 0)
+    end
+
+    create(index(:a2a_tasks, [:updated_at, :id]))
+  end
+end

@@ -5,3 +5,20 @@ window.addEventListener("phx:clear-secrets", () => document.querySelectorAll("in
 window.addEventListener("phx:clear-prompt", () => { const input = document.querySelector("#prompt"); if (input) input.value = ""; });
 // A real websocket round trip is the native packaging smoke-test boundary.
 window.addEventListener("phx:page-loading-stop", () => document.documentElement.dataset.live = "connected");
+
+document.addEventListener("click", async event => {
+  const button = event.target.closest("#copy-agent-card-url");
+  if (!button) return;
+  const input = document.getElementById(button.dataset.copyTarget);
+  const status = document.getElementById("agent-card-copy-status");
+  if (!input || !status) return;
+  let copied = false;
+  // Selection fallback also works in the native WebKit shell.
+  input.focus();
+  input.select();
+  try { copied = document.execCommand("copy"); } catch (_) {}
+  if (!copied && navigator.clipboard) {
+    try { await navigator.clipboard.writeText(input.value); copied = true; } catch (_) {}
+  }
+  status.textContent = copied ? "URL copied" : "Select and copy the URL above.";
+});

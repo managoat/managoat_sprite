@@ -80,13 +80,23 @@ defmodule ManaspritesDesktop.Fleet do
 
   def permission_answered?(aid, cid, rid) do
     Repo.exists?(
-      from(j in Job,
+      from(e in ManaspritesDesktop.EventCache,
         where:
-          j.agent_id == ^aid and j.kind == "permission" and j.state == "completed" and
-            fragment("json_extract(?, '$.conversation_id')", j.payload) == ^cid and
-            fragment("json_extract(?, '$.request_id')", j.payload) == ^rid
+          e.agent_id == ^aid and e.conversation_id == ^cid and
+            fragment("json_extract(?, '$.kind')", e.record) == "permission" and
+            fragment("json_extract(json_extract(?, '$.data'), '$.id')", e.record) == ^rid and
+            fragment("json_extract(json_extract(?, '$.data'), '$.status')", e.record) ==
+              "resolved"
       )
-    )
+    ) or
+      Repo.exists?(
+        from(j in Job,
+          where:
+            j.agent_id == ^aid and j.kind == "permission" and j.state == "completed" and
+              fragment("json_extract(?, '$.conversation_id')", j.payload) == ^cid and
+              fragment("json_extract(?, '$.request_id')", j.payload) == ^rid
+        )
+      )
   end
 
   def notify, do: Phoenix.PubSub.broadcast(ManaspritesDesktop.PubSub, "fleet", :changed)

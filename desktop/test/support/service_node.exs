@@ -13,6 +13,12 @@ Application.put_env(:managoat_sprite, Managoat.Sprite.Repo,
 
 config =
   Managoat.Sprite.Config.validate!(%{
+    "a2a" => %{
+      "enabled" => true,
+      "external_origin" => "https://agent.example",
+      "origin_verified" => true,
+      "ingress" => "public"
+    },
     "runtime" => "claude",
     "workspace" => Path.join(root, "project"),
     "task_required" => false,

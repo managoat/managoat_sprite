@@ -14,7 +14,7 @@ defmodule ManaspritesDesktop.Operations do
           connect(agent)
 
         "sync" ->
-          sync(agent.id, job.payload["conversation_id"])
+          with :ok <- discovery(agent), do: sync(agent.id, job.payload["conversation_id"])
 
         "prompt" ->
           cid = job.payload["conversation_id"]
@@ -74,9 +74,27 @@ defmodule ManaspritesDesktop.Operations do
     _ -> {:error, :connection_failed}
   end
 
+  defp discovery(agent) do
+    with {:ok, %{"contract" => "fountain-conversations-v1"} = capabilities} <-
+           ServiceClient.request(agent, :get, "/api/capabilities") do
+      current = Repo.get!(Agent, agent.id)
+
+      Repo.update!(
+        Ecto.Changeset.change(current,
+          snapshot: Map.put(current.snapshot, "capabilities", capabilities)
+        )
+      )
+
+      :ok
+    else
+      {:error, reason} -> {:error, reason}
+      _ -> {:error, :invalid_response}
+    end
+  end
+
   defp connect(agent) do
     with {:ok, agent} <- bind_private(agent),
-         {:ok, %{"contract" => "fountain-conversations-v1"}} <-
+         {:ok, %{"contract" => "fountain-conversations-v1"} = capabilities} <-
            ServiceClient.request(agent, :get, "/api/capabilities"),
          {:ok, %{"data" => [%{"id" => "default", "runtime" => runtime} = remote]}} <-
            ServiceClient.request(agent, :get, "/api/agents") do
@@ -84,6 +102,7 @@ defmodule ManaspritesDesktop.Operations do
 
       Repo.update!(
         Ecto.Changeset.change(current,
+          snapshot: Map.put(current.snapshot, "capabilities", capabilities),
           runtime: runtime,
           workspace: remote["workspace"] || current.workspace,
           status: "ready",
@@ -154,7 +173,7 @@ defmodule ManaspritesDesktop.Operations do
 
             Repo.update!(
               Ecto.Changeset.change(agent,
-                snapshot: %{"conversations" => conversations},
+                snapshot: Map.put(agent.snapshot, "conversations", conversations),
                 status: status,
                 error: nil,
                 checked_at: DateTime.utc_now()

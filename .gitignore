@@ -17,3 +17,5 @@ __pycache__/
 /desktop/.state/
 /desktop/dist/
 /desktop/priv/static/assets/phoenix*.js
+
+/.venv-a2a/

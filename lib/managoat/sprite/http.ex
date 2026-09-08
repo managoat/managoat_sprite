@@ -7,6 +7,14 @@ defmodule Managoat.Sprite.HTTP do
   plug(:body)
   plug(:dispatch)
 
+  get "/.well-known/agent-card.json" do
+    if Managoat.Sprite.A2A.Card.available?(),
+      do: json(conn, 200, Managoat.Sprite.A2A.Card.document()),
+      else: error(conn, 404, "not_found")
+  end
+
+  post("/a2a", do: Managoat.Sprite.A2A.HTTP.call(conn))
+
   get("/healthz", do: json(conn, 200, %{ok: true}))
 
   get "/readyz" do
@@ -42,6 +50,7 @@ defmodule Managoat.Sprite.HTTP do
 
   get "/api/capabilities" do
     json(conn, 200, %{
+      a2a: Managoat.Sprite.A2A.Card.metadata(),
       contract: "fountain-conversations-v1",
       runtime: Config.get()["runtime"],
       features: ~w(text conversations turns events sse permissions interrupt idempotency),
@@ -202,7 +211,7 @@ defmodule Managoat.Sprite.HTTP do
         |> put_resp_header("vary", "Origin")
         |> put_resp_header(
           "access-control-allow-headers",
-          "Authorization, Content-Type, Last-Event-ID, Idempotency-Key"
+          "Authorization, Content-Type, Last-Event-ID, Idempotency-Key, A2A-Version"
         )
         |> put_resp_header("access-control-allow-methods", "GET, POST, DELETE, OPTIONS")
       else
@@ -215,6 +224,10 @@ defmodule Managoat.Sprite.HTTP do
 
       conn.method == "OPTIONS" ->
         conn |> error(403, "origin_denied") |> halt()
+
+      conn.method == "GET" and conn.request_path == "/.well-known/agent-card.json" and
+          Managoat.Sprite.A2A.Card.available?() ->
+        conn
 
       conn.request_path == "/healthz" ->
         conn
@@ -255,8 +268,17 @@ defmodule Managoat.Sprite.HTTP do
 
       {:ok, bytes, conn} ->
         case Jason.decode(bytes) do
-          {:ok, map} when is_map(map) -> %{conn | body_params: map}
-          _ -> conn |> error(422, "invalid_json") |> halt()
+          {:ok, map} when is_map(map) ->
+            %{conn | body_params: map}
+
+          {:ok, _} when conn.request_path == "/a2a" ->
+            conn |> Managoat.Sprite.A2A.HTTP.error(nil, -32600, "invalid_request") |> halt()
+
+          _ when conn.request_path == "/a2a" ->
+            conn |> Managoat.Sprite.A2A.HTTP.error(nil, -32700, "invalid_json") |> halt()
+
+          _ ->
+            conn |> error(422, "invalid_json") |> halt()
         end
 
       _ ->

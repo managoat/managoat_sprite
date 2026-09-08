@@ -86,6 +86,69 @@ defmodule ManaspritesDesktop.FleetTest do
     %{root: root, url: "http://127.0.0.1:#{port}"}
   end
 
+  test "A2A discovery refreshes explicitly and renders safe URLs with private and old-service guidance",
+       %{url: url} do
+    aid = attach(url)
+    {:ok, view, _} = live_session()
+    view |> element("#agent-nav-#{aid}") |> render_click()
+    assert has_element?(view, "#a2a-discovery", "Not enabled")
+    refute has_element?(view, "#copy-agent-card-url")
+    config = Managoat.Sprite.Config.get()
+
+    a2a = %{
+      "enabled" => true,
+      "external_origin" => "https://agent.example",
+      "origin_verified" => true,
+      "ingress" => "private"
+    }
+
+    Application.put_env(:managoat_sprite, :config, Map.put(config, "a2a", a2a))
+    view |> element("#refresh-agent") |> render_click()
+
+    eventually(fn ->
+      assert has_element?(
+               view,
+               "#agent-card-url[value='https://agent.example/.well-known/agent-card.json']"
+             )
+    end)
+
+    assert has_element?(view, "#a2a-discovery", "Private — caller needs network access")
+    assert has_element?(view, "#copy-agent-card-url", "Copy URL")
+    refute render(view) =~ "synthetic-service-key"
+
+    eventually(fn ->
+      assert get_in(Fleet.get(aid).snapshot, ["capabilities", "a2a", "ingress"]) == "private"
+    end)
+
+    # Drain explicit connection/refresh traffic; cached discovery adds no idle work.
+    drain_service_requests()
+    Process.sleep(900)
+    refute_received {:service_request, _, _}
+
+    Application.put_env(
+      :managoat_sprite,
+      :config,
+      Map.put(config, "a2a", Map.put(a2a, "origin_verified", false))
+    )
+
+    view |> element("#refresh-agent") |> render_click()
+    eventually(fn -> assert has_element?(view, "#a2a-discovery", "Configuration needed") end)
+    refute has_element?(view, "#agent-card-url")
+    Application.put_env(:manasprites_desktop, :fixture_old_capabilities, true)
+    on_exit(fn -> Application.delete_env(:manasprites_desktop, :fixture_old_capabilities) end)
+    view |> element("#refresh-agent") |> render_click()
+    eventually(fn -> assert has_element?(view, "#a2a-discovery", "Upgrade required") end)
+    refute has_element?(view, "#agent-card-url")
+  end
+
+  defp drain_service_requests do
+    receive do
+      {:service_request, _, _} -> drain_service_requests()
+    after
+      0 -> :ok
+    end
+  end
+
   test "credential settings persist encrypted values without rendering them", %{root: root} do
     {:ok, view, _} = live_session()
     view |> element("#settings-open") |> render_click()
@@ -158,7 +221,7 @@ defmodule ManaspritesDesktop.FleetTest do
     assert [%{"status" => "idle"}] = Managoat.Sprite.Store.call(:conversations)
   end
 
-  test "provider billing reports survive output pagination without rewriting service completion",
+  test "provider billing failures survive output pagination and retain service failure",
        %{url: url} do
     script = Application.fetch_env!(:managoat_sprite, :script)
 
@@ -194,10 +257,10 @@ defmodule ManaspritesDesktop.FleetTest do
     eventually(fn ->
       assert [conversation] = Fleet.conversations(Fleet.get(aid))
       assert [turn] = Fleet.turns(aid, conversation["id"])
-      assert turn["status"] == "completed"
+      assert turn["status"] == "failed"
       assert turn["desktop_warning"] =~ "billing or credit error"
       assert has_element?(view, ".provider-warning", "billing or credit error")
-      assert has_element?(view, ".stage", "Review provider error (service: completed)")
+      assert has_element?(view, ".stage", "Review provider error (service: failed)")
       assert has_element?(view, "#agent-nav-#{aid}", "Review provider error")
     end)
 
@@ -246,7 +309,7 @@ defmodule ManaspritesDesktop.FleetTest do
     eventually(fn ->
       [conversation] = Fleet.conversations(Fleet.get(aid))
       assert [_, _, third] = Fleet.turns(aid, conversation["id"])
-      assert third["status"] == "completed"
+      assert third["status"] == "failed"
       assert third["desktop_warning"] =~ "without an automatic retry"
       assert has_element?(view, ".provider-warning", "without an automatic retry")
     end)

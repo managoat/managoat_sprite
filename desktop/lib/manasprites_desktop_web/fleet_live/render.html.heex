@@ -403,7 +403,7 @@
       </section>
     </div>
     <footer>
-      Status reflects the last check. Idle agents are not polled. Approval markers clear after this app’s answer is acknowledged or the turn finishes.
+      Status reflects the last check. Idle agents are not polled. Approval markers clear after an observed answer or the turn finishes.
     </footer>
   </section>
 
@@ -441,6 +441,32 @@
         </div>
         <div><button phx-click="remove_agent" class="quiet">Remove</button></div>
       </div>
+    </div>
+    <% discovery = ManaspritesDesktop.A2ADiscovery.for_agent(@agent) %>
+    <div id="a2a-discovery" class="a2a-discovery">
+      <strong>{discovery.status}</strong>
+      <div :if={discovery.url} class="a2a-url">
+        <input id="agent-card-url" readonly value={discovery.url} aria-label="Agent card URL" />
+        <button id="copy-agent-card-url" type="button" data-copy-target="agent-card-url">
+          Copy URL
+        </button>
+        <span id="agent-card-copy-status" role="status"></span>
+      </div>
+      <p :if={discovery.private?}>
+        Private — caller needs network access. The URL alone is insufficient; another agent cannot use this app’s private relay automatically.
+      </p>
+      <p :if={discovery.url}>
+        For trusted peers acting as you. Configure the service bearer key separately; it grants full service and workspace authority. Copy URL copies no credentials.
+      </p>
+      <p :if={discovery.status == "Not enabled"}>
+        A2A is off. Enable it in the service configuration with a verified external HTTPS origin.
+      </p>
+      <p :if={discovery.status == "Configuration needed"}>
+        Configure and verify an external HTTPS origin on the service, then refresh.
+      </p>
+      <p :if={discovery.status == "Upgrade required"}>
+        This service has no A2A discovery information. Upgrade to an A2A-capable release, then refresh.
+      </p>
     </div>
     <div :if={@agent.error} class="flash" role="alert" id="agent-error">
       {@agent.error}<details><summary>Update the service key</summary><.form
