@@ -24,7 +24,7 @@ screenshots use synthetic demo data from the native workflow test.
   Connect from a discovery result with its name and organization already filled in.
 - Create a Sprite with a runtime, repository, model, instructions and approval
   policy; install the existing service and connect its authenticated endpoint.
-  Fresh private Codex and Claude creation passed live checks; public creation remains unqualified.
+  Fresh private Codex/Claude creation and public Codex creation passed live checks.
 - Write-only Sprites, inference and GitHub credential settings; AES-256-GCM
   encryption in SQLite with a private local master-key file.
 - Prompt, continue, stream output through active-work polling, answer agent tool
@@ -45,8 +45,8 @@ screenshots use synthetic demo data from the native workflow test.
 - macOS native-library relocation and ad-hoc signing during packaging.
 
 Private relays, Codex file work and continuation, interruption, and file/Git
-inspection passed live checks using the packaged backend. Live approvals and
-distribution checks remain open. Existing agents can be connected using their installed service bearer key
+inspection passed live checks using the packaged backend. Two real Codex agents completed overlapping file work. Live approval answering passed
+with explicit human-review mode; delivery of that service default and distribution checks remain open. Existing agents can be connected using their installed service bearer key
 and either a service URL or a Sprite name and organization.
 See the [product plan and verification record](../docs/desktop.md).
 
@@ -58,6 +58,11 @@ or Claude, and optionally supply an HTTPS repository, Git ref and instructions.
 The saved GitHub key is used only when explicitly selected for the clone.
 
 Creation currently installs service `0.1.0` at `/home/sprite/project`, port 8080.
+That release's Codex adapter defaults to automatic approval review. The service
+source now selects human review so offered requests reach the configured
+ask/allow/deny policy, but this fix still needs a published service release and
+an updated provisioning pin. The live approval check used an explicitly
+configured disposable agent.
 Private access is the default: the app opens an authenticated platform relay for
 each request and closes it afterward. Public URL access is also available; the
 agent API still requires its generated bearer key. The Sprite remains private
@@ -131,7 +136,7 @@ cd desktop
 mix deps.get
 mix assets.build
 mix check
-tauri build --bundles app --ci
+cargo tauri build --bundles app --ci
 python3 scripts/smoke-macos.py
 python3 scripts/smoke-native-fleet.py
 python3 scripts/package-macos.py
@@ -172,8 +177,9 @@ metadata, not account state or transcripts. This command does not publish files.
 The [desktop CI workflow](../.github/workflows/desktop.yml) builds on separate
 Apple Silicon and Intel macOS 15 runners, runs the integration checks and archive
 smoke test, and uploads only verified ZIP/checksum/report files as temporary CI
-artifacts. It requires no Sprites, inference or signing credentials. The workflow
-has been validated locally; a hosted run and Intel qualification remain pending.
+artifacts. It requires no Sprites, inference or signing credentials. The hosted ARM job passed all 24 desktop tests and exposed a CLI invocation
+error, now corrected to `cargo tauri`. Final hosted packaging and Intel qualification
+remain pending.
 
 `mix check` additionally runs the real Sprite HTTP service and ACP ScriptedAgent
 to verify prompts, session continuation, LiveView permission answers,
@@ -204,6 +210,36 @@ on a clean second Mac are separate distribution gates; this is not a published
 desktop release. The initial packaging target is Apple Silicon macOS.
 The embedded launcher disables Erlang distribution and crash dumps regardless of
 inherited release settings; its distribution cookie is an unused fixed marker.
+
+## Prepare a signed desktop release
+
+This path requires a **Developer ID Application** identity in the build Mac's
+Keychain and a configured `notarytool` Keychain profile. Neither is currently
+available for this project's release qualification. Follow the
+[Tauri signing setup](https://v2.tauri.app/distribute/sign/macos/) and
+[Apple notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow)
+to configure them. Keep credentials outside the repository.
+
+From `desktop/`, after the normal checks pass:
+
+```sh
+export APPLE_SIGNING_IDENTITY='Developer ID Application: Your Name (TEAMID)'
+cargo tauri build --bundles app --ci
+notary_dir=$(mktemp -d)
+ditto -c -k --keepParent src-tauri/target/release/bundle/macos/Manasprites.app "$notary_dir/Manasprites.zip"
+xcrun notarytool submit "$notary_dir/Manasprites.zip" --keychain-profile manasprites-notary --wait
+xcrun stapler staple src-tauri/target/release/bundle/macos/Manasprites.app
+python3 scripts/package-macos.py --require-notarized --output dist/notarized
+```
+
+The identity applies to both the embedded runtime and the native shell. Runtime
+signatures include secure timestamps. The release packaging flag requires a
+Developer ID signature, a stapled ticket and Gatekeeper acceptance on both the
+source app and the extracted ZIP, then executes the native smoke test. The
+report records that verification; ordinary local packages make no notarization
+claim. An ad-hoc app has been tested and is refused before an archive is created.
+The signed/notarized success path remains unverified until credentials are
+available. These commands prepare artifacts without publishing a release.
 
 ## Develop without rebuilding the native shell
 

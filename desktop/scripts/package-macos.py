@@ -25,9 +25,15 @@ def run(*args):
     return subprocess.check_output(args, text=True, stderr=subprocess.STDOUT).strip()
 
 
-def verify(app):
+def verify(app, require_notarized=False):
     app = app.resolve(strict=True)
     run('/usr/bin/codesign', '--verify', '--deep', '--strict', str(app))
+    if require_notarized:
+        signature = run('/usr/bin/codesign', '--display', '--verbose=4', str(app))
+        assert 'Authority=Developer ID Application:' in signature, 'Developer ID Application signature required'
+        assert 'Timestamp=' in signature, 'Secure signing timestamp required'
+        run('/usr/bin/xcrun', 'stapler', 'validate', str(app))
+        run('/usr/sbin/spctl', '--assess', '--type', 'execute', '--verbose=2', str(app))
     with (app / 'Contents/Info.plist').open('rb') as file:
         info = plistlib.load(file)
     assert info['CFBundleIdentifier'] == 'com.managoat.manasprites', 'Unexpected app identity'
@@ -67,8 +73,8 @@ def verify(app):
     return {'version': version, 'architecture': arch, 'native_binaries': len(binaries)}
 
 
-def package(app, destination):
-    evidence = verify(app)
+def package(app, destination, require_notarized=False):
+    evidence = verify(app, require_notarized)
     destination.mkdir(parents=True, exist_ok=True)
     filename = f"Manasprites-{evidence['version']}-macos-{evidence['architecture']}.zip"
     with tempfile.TemporaryDirectory(prefix='.package-', dir=destination) as temporary:
@@ -78,7 +84,7 @@ def package(app, destination):
         unpacked = staging / 'Archive verification'
         run('/usr/bin/ditto', '-x', '-k', str(archive), str(unpacked))
         extracted = unpacked / 'Manasprites.app'
-        assert verify(extracted) == evidence, 'Archive changed bundle metadata'
+        assert verify(extracted, require_notarized) == evidence, 'Archive changed bundle metadata'
         module_spec = importlib.util.spec_from_file_location('native_smoke', Path(__file__).with_name('smoke-macos.py'))
         module = importlib.util.module_from_spec(module_spec)
         module_spec.loader.exec_module(module)
@@ -115,7 +121,8 @@ def package(app, destination):
         checksum = staging / (filename + '.sha256')
         checksum.write_text(f'{digest}  {filename}\n')
         evidence.update(sha256=digest, archive=filename, native_smoke='passed',
-            distribution='disabled', signing='local build; notarization is a separate gate')
+            distribution='disabled', signing=('Developer ID; stapled notarization and Gatekeeper verified'
+                if require_notarized else 'local build; notarization not verified'))
         report = staging / (filename + '.json')
         report.write_text(json.dumps(evidence, indent=2) + '\n')
         for file in (archive, checksum, report):
@@ -127,5 +134,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('app', type=Path, nargs='?', default=Path('src-tauri/target/release/bundle/macos/Manasprites.app'))
     parser.add_argument('--output', type=Path, default=Path('dist'))
+    parser.add_argument('--require-notarized', action='store_true',
+        help='Require Developer ID signing, a stapled notarization ticket and Gatekeeper acceptance before and after archiving')
     args = parser.parse_args()
-    package(args.app, args.output)
+    package(args.app, args.output, args.require_notarized)

@@ -33,7 +33,18 @@ defmodule Managoat.Sprite.Runtime do
       "CLAUDE_CONFIG_DIR" => Path.join(home(), ".claude")
     }
 
-    Map.merge(base, credentials) |> Map.to_list()
+    environment = Map.merge(base, credentials)
+
+    # codex-acp 1.10 defaults to an automatic reviewer. Route escalation
+    # requests to the ACP peer instead, so the service's effective ask/allow/
+    # deny policy controls their resolution, including narrowed conversations.
+    # The adapter calls this mode "read-only", but it permits workspace writes.
+    environment =
+      if Config.get()["runtime"] == "codex",
+        do: Map.put(environment, "INITIAL_AGENT_MODE", "read-only"),
+        else: environment
+
+    Map.to_list(environment)
   end
 
   def resolve(cmd) do

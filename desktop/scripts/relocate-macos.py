@@ -60,7 +60,7 @@ def relocate(root):
             if dep.startswith('/') and not dep.startswith(('/usr/lib/', '/System/Library/')):
                 raise RuntimeError('Release still depends on an external native library')
         run('/usr/bin/codesign', '--force', '--options', 'runtime', '--entitlements', str(entitlements),
-            '--sign', identity, str(path))
+            *(['--timestamp'] if identity != '-' else []), '--sign', identity, str(path))
     print(f'Relocated {len(copied)} native libraries; signed {len(queue)} Mach-O files.')
 
 

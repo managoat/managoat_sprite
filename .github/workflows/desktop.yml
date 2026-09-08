@@ -28,17 +28,25 @@ jobs:
         with:
           otp-version: '28.4'
           elixir-version: '1.19.5'
+      - uses: actions/cache@v4
+        id: tauri-cli
+        with:
+          path: ~/.cargo/bin/cargo-tauri
+          key: tauri-cli-${{ runner.os }}-${{ runner.arch }}-rust1.96.0-tauri2.11.4
       - name: Install pinned native build tools
         run: |
           rustup toolchain install 1.96.0 --profile minimal
           rustup default 1.96.0
-          cargo install tauri-cli --version 2.11.4 --locked
+          if [ '${{ steps.tauri-cli.outputs.cache-hit }}' != 'true' ]; then
+            cargo install tauri-cli --version 2.11.4 --locked
+          fi
+          cargo tauri --version
       - name: Fetch test dependencies
         run: mix deps.get
       - name: Test actual service, ACP and local subprocess workflows
         run: mix check
       - name: Build embedded release and app
-        run: tauri build --bundles app --ci
+        run: cargo tauri build --bundles app --ci
       - name: Exercise the native fleet UI with real ACP service processes
         run: python3 scripts/smoke-native-fleet.py
       - name: Verify and smoke-test the delivery archive
