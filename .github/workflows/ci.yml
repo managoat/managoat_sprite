@@ -18,6 +18,7 @@ jobs:
             _build
           key: ${{ runner.os }}-otp28-${{ hashFiles('mix.lock') }}
       - run: mix deps.get
+      - run: python3 -m venv .venv-a2a && .venv-a2a/bin/pip install -r test/fixtures/a2a/requirements.txt
       - run: mix check
       - run: python3 -m unittest discover -s test -p '*_test.py' -v
       - run: sh -n install.sh install-cli.sh scripts/build-release.sh

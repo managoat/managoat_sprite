@@ -2,16 +2,24 @@
 
 [Back to Managoat Sprite](../README.md)
 
+The laptop application is a separate Mix project under `desktop/`. Its Phoenix
+tests and native macOS packaging have their own [development commands](../desktop/README.md).
+Run the root checks below as well when changing shared service/CLI behavior.
+
 For local development, install Elixir 1.19 and a compatible Erlang/OTP toolchain,
 then run:
 
 ```sh
 mix deps.get
+python3 -m venv .venv-a2a
+.venv-a2a/bin/pip install -r test/fixtures/a2a/requirements.txt
 mix check
 python3 -m unittest discover -s test -p '*_test.py' -v
 ```
 
-The tests use the real ACP ScriptedAgent and real local subprocesses. Live Sprite
+The tests use the real ACP ScriptedAgent and real local subprocesses, including
+the pinned official A2A Python SDK over HTTP and a ScriptedAgent behind OS stdio.
+An existing SDK environment can be selected with A2A_TEST_PYTHON=/path/to/python. Live Sprite
 checks are tracked separately from local test results. The Linux watchdog test
 requires Linux; it is skipped on macOS.
 
@@ -48,6 +56,8 @@ Install those tools, Git, and a C/C++ build toolchain on your Linux build machin
 git clone https://github.com/managoat/manasprites.git
 cd manasprites
 mix deps.get
+python3 -m venv .venv-a2a
+.venv-a2a/bin/pip install -r test/fixtures/a2a/requirements.txt
 mix check
 python3 -m unittest discover -s test -p '*_test.py' -v
 sh scripts/build-release.sh
@@ -65,6 +75,8 @@ MANAGOAT_ARCHIVE="$PWD/dist/managoat-linux-amd64.tar.gz" \
 ```
 
 Set `MANAGOAT_ARCHIVE` to the actual archive path if you copied it elsewhere.
+When testing an unpublished candidate, pass an explicit --version matching the
+archive VERSION file; the installer default still points to the published release.
 A macOS release cannot be installed on a Linux Sprite. The build machine needs
 Elixir and Erlang; the target Sprite does not.
 

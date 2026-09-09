@@ -4,6 +4,7 @@ defmodule Managoat.Sprite.Engine do
   alias Managoat.Sprite.{Store, Config, ConversationServer, Lifecycle}
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   def admit(id, attrs, key), do: GenServer.call(__MODULE__, {:admit, id, attrs, key}, 30_000)
+  def interrupt_task(id), do: GenServer.call(__MODULE__, {:interrupt_task, id})
   def interrupt(id), do: GenServer.call(__MODULE__, {:interrupt, id})
   def answer(id, rid, option), do: GenServer.call(__MODULE__, {:answer, id, rid, option}, 15_000)
   def execution(pid), do: GenServer.call(__MODULE__, {:execution, pid})
@@ -107,17 +108,28 @@ defmodule Managoat.Sprite.Engine do
     end
   end
 
+  def handle_call({:interrupt_task, id}, _, s) do
+    case Store.call(:active) do
+      %{"id" => ^id} when not is_nil(s.worker) ->
+        cancel_worker(id, s, "task_not_cancelable")
+
+      _ ->
+        {:reply, {:error, {409, "task_not_cancelable"}}, s}
+    end
+  end
+
   def handle_call({:interrupt, id}, _, s) do
-    if active?(id, s) do
-      send(s.worker, :interrupt)
-      {:reply, :ok, s}
-    else
-      {:reply, {:error, {409, "no_turn_running"}}, s}
+    case Store.call(:active) do
+      %{"conversation_id" => ^id, "id" => tid} when not is_nil(s.worker) ->
+        cancel_worker(tid, s, "no_turn_running")
+
+      _ ->
+        {:reply, {:error, {409, "no_turn_running"}}, s}
     end
   end
 
   def handle_call({:answer, id, rid, option}, _, s) do
-    if active?(id, s) do
+    if active?(id, s) and s.closing == nil and Store.call(:active)["cancel_requested"] != true do
       case Store.call({:resolve, id, rid, option}) do
         :ok ->
           send(s.worker, {:answer, rid, option})
@@ -145,6 +157,19 @@ defmodule Managoat.Sprite.Engine do
 
       true ->
         {:reply, Store.call({if(delete?, do: :delete, else: :terminate), id}), s}
+    end
+  end
+
+  defp cancel_worker(tid, s, reason) do
+    # The worker can finish while the coordinator is recording cancellation.
+    # The Store compare-and-set is authoritative; a lost race is not a crash.
+    case Store.call({:cancel_requested, tid}) do
+      :ok ->
+        send(s.worker, :interrupt)
+        {:reply, :ok, s}
+
+      _ ->
+        {:reply, {:error, {409, reason}}, s}
     end
   end
 

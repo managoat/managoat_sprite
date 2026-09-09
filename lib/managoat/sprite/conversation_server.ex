@@ -16,12 +16,15 @@ defmodule Managoat.Sprite.ConversationServer do
        renew_at: nil,
        bytes: 0,
        wire_bytes: 0,
-       cancelled: false,
+       cancelled: turn["cancel_requested"] == true,
        failure: nil
      }, {:continue, :start}}
   end
 
   @impl true
+  def handle_continue(:start, %{cancelled: true} = s),
+    do: finish(s, "interrupted", "explicit_cancel", nil)
+
   def handle_continue(:start, s) do
     runtime = Engine.runtime()
 
@@ -122,7 +125,7 @@ defmodule Managoat.Sprite.ConversationServer do
   def handle_info(:timeout, s), do: finish(s, "interrupted", "turn_timeout", nil)
 
   def handle_info(:force_stop, s),
-    do: finish(s, "interrupted", s.failure || "forced_termination", nil)
+    do: finish(s, "interrupted", s.failure || "explicit_cancel_forced", nil)
 
   def handle_info({:answer, rid, option}, s) do
     Peer.answer_permission(s.peer, rid, option)
@@ -193,13 +196,25 @@ defmodule Managoat.Sprite.ConversationServer do
   defp report({:done, reason, usage}, s) do
     status =
       cond do
+        s.failure -> "failed"
         s.cancelled or reason == "cancelled" -> "interrupted"
         reason == "refusal" -> "failed"
         true -> "completed"
       end
 
-    finish(s, status, if(status == "completed", do: nil, else: reason), usage)
+    reason =
+      cond do
+        s.failure -> s.failure
+        s.cancelled -> "explicit_cancel"
+        status == "completed" -> nil
+        true -> reason
+      end
+
+    finish(s, status, reason, usage)
   end
+
+  defp report({:failed, _}, %{cancelled: true, failure: nil} = s),
+    do: finish(s, "interrupted", "explicit_cancel", nil)
 
   defp report({:failed, {:acp_error, tag, _}}, s) when tag in [:resume_session, :load_session],
     do: finish(s, "failed", "session_unavailable", nil)
@@ -224,7 +239,9 @@ defmodule Managoat.Sprite.ConversationServer do
       finish(s, "failed", "output_budget_exceeded", nil)
     else
       Store.call({:output, s.turn["conversation_id"], s.turn["id"], stream, data})
-      {:noreply, %{s | bytes: bytes}}
+
+      {:noreply,
+       %{s | bytes: bytes, failure: s.failure || Managoat.Sprite.ProviderFailure.reason(data)}}
     end
   end
 

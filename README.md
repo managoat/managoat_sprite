@@ -1,87 +1,80 @@
 # Manasprites
 
-A persistent coding agent you can talk to from your terminal or over HTTP.
+A desktop app for running a fleet of coding agents on [Sprites](https://sprites.dev).
+Give agents work, follow their progress, answer approvals, and review their files
+and Git changes from one place. Each agent works in its own persistent cloud
+workspace while you manage it from your laptop.
 
-```sh
-manasprites sprite create --file agent.json
-manasprites prompt "Build a Python reading-list CLI. Save to JSON. Write and run tests."
-manasprites prompt --continue "Add search. Keep the storage format and test the new command."
-```
+![Manasprites fleet overview showing two agents awaiting approval](docs/screenshots/desktop-fleet.png)
 
-Manasprites creates a [Sprite](https://sprites.dev), prepares the workspace, and
-starts the agent service. `prompt` streams the answer and tool activity, then
-exits when the turn finishes. Follow-ups resume the same conversation and files.
+## Work with your agents
 
-## Setup
+- **Create or connect agents.** Add a Sprite with a repository, runtime and
+  instructions, or connect an existing agent.
+- **Keep work moving.** Send tasks to different agents, see which are working or
+  need attention, answer tool approvals, and interrupt a turn when needed.
+- **Pick up where you left off.** Reopen conversations and send follow-ups in the
+  same workspace.
+- **Review the results.** Browse project files and inspect staged and unstaged
+  Git changes beside the conversation.
 
-You need macOS or Linux, Python 3.9+, curl, an authenticated
-[Sprites CLI](https://docs.sprites.dev/quickstart/), and `OPENAI_API_KEY` exported.
-Install the CLI:
+![Conversation workbench with a project file preview](docs/screenshots/desktop-files.png)
 
-```sh
-curl -fsSL https://github.com/managoat/manasprites/releases/download/cli-v0.2.0/install-cli.sh | sh
-export PATH="$HOME/.local/bin:$PATH"
-```
+<details>
+<summary>See Git changes</summary>
 
-Save this as `agent.json`, replacing `your-sprites-org`:
+![Conversation workbench with an unstaged Git diff](docs/screenshots/desktop-changes.png)
 
-```json
-{
-  "name": "my-agent",
-  "org": "your-sprites-org",
-  "url_auth": "public",
-  "agent": {"runtime": "codex"}
-}
-```
+</details>
 
-Run the three commands at the top. The CLI reads `agent.json` by default and
-loads the saved URL and API key for you. Use `--file path/to/agent.json` to select
-another config.
+Screenshots show the running native macOS app with synthetic demo agents.
 
-Starting with a project? Add `repository`, `env`, and `bootstrap` to the config;
-Manasprites clones it, imports the named variables, and runs your setup commands.
-See the [complete example](examples/agent.json) and
-[configuration reference](docs/provisioning.md). Already have a Sprite?
-[Install the service directly](docs/manual-install.md).
+## Try the macOS preview
 
-## Conversations
+The preview requires **macOS 15 or later** and currently needs to be built from
+source. Follow the
+[macOS build instructions](desktop/README.md#build-and-test-on-macos) to build
+and open `Manasprites.app`. A signed, notarized desktop download is still pending.
 
-```sh
-manasprites conversations
-manasprites prompt --conversation CONVERSATION_ID "Run the tests and fix any failures."
-manasprites watch CONVERSATION_ID
-```
+Once the app is open:
 
-`--continue` uses your last conversation on this Sprite. `watch` replays the
-latest turn and follows it without submitting work. Ctrl-C stops watching;
-the agent keeps working. One turn runs at a time across the shared workspace.
+1. Save your Sprites token and inference API key in **Keys & settings**.
+2. Choose **Add a Sprite**, select a runtime, and optionally add a repository.
+   Use **Connect an agent** if you already have an installed Manasprites agent.
+3. Open the agent, give it a task, and follow its conversation and workspace.
 
-For longer prompts or scripts:
+You bring your own Sprites and inference accounts. The app saves connections,
+credentials and cached history locally; the agents and their project files live
+on Sprites. See the [desktop guide](desktop/README.md) for setup and usage details.
 
-```sh
-cat task.md | manasprites prompt -
-manasprites conversations --json
-```
+## Preview status
 
-The service also exposes an authenticated HTTP API and SSE streams for your own
-app. See the [CLI and HTTP walkthroughs](docs/conversations.md).
+Native macOS builds and workflow checks have passed on Apple Silicon and Intel. Live Codex
+checks cover public/private creation, coding tasks, follow-ups, interruption,
+cold wake, file/Git inspection, and overlapping work on two agents. Live approval
+answering passed on a fresh service installation.
 
-## Docs and status
+Service 0.1.2 supports opt-in A2A access: trusted agents can discover
+an agent card, submit tasks, stream results and follow up while the laptop is
+closed. Live Codex qualification includes owner approval after reopening and
+conversation continuity across a service restart. See the [A2A guide](docs/a2a.md)
+for configuration and access requirements. The installer and desktop provisioning
+default to this [published preview release](https://github.com/managoat/manasprites/releases/tag/v0.1.2).
 
-The service is a [v0.1.0 preview](https://github.com/managoat/manasprites/releases/tag/v0.1.0);
-the [CLI preview](https://github.com/managoat/manasprites/releases/tag/cli-v0.2.0) installs separately. Codex has live inference and continuation
-coverage; Claude still needs live qualification. There is no bundled web UI.
+Funded Claude inference and desktop distribution remain open. The
+[acceptance record](docs/desktop-acceptance.md) separates verified behavior from
+remaining work.
 
-Setup makes no model request; prompts use your inference account. The generated
-bearer key grants owner access, and tool permissions default to `auto_allow`.
-Choose `url_auth: sprite` for private access through a tunnel.
+## Development
 
-- [Provisioning](docs/provisioning.md): repositories, environment, bootstrap, and retries.
-- [Conversations](docs/conversations.md): CLI commands, HTTP examples, and streaming.
-- [Operations](docs/guide.md): configuration, service management, backups, and upgrades.
-- [API specification](docs/spec.md#http-contract) · [OpenAPI](priv/openapi.json).
-- [Development](docs/development.md): tests and release builds.
-- [Acceptance record](docs/acceptance.md): verified behavior and remaining work.
+The laptop app uses **Elixir + Phoenix LiveView**, OTP for fleet connections and
+jobs, and **SQLite/Ecto** for local state. Tauri + ElixirKit provides the native
+macOS shell and embeds the Elixir runtime.
+
+- [Desktop development and build guide](desktop/README.md)
+- [Architecture and delivery plan](docs/desktop.md)
+- [Sprite service development](docs/development.md) and [API specification](docs/spec.md#http-contract)
+- [Optional CLI guide](docs/cli.md) for terminal workflows and scripts
 
 Built with [Managoat ACP](https://github.com/managoat/managoat_acp),
 [Runtimes](https://github.com/managoat/managoat_runtimes), and

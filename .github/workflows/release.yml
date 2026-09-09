@@ -17,6 +17,7 @@ jobs:
           otp-version: '28.1'
           elixir-version: '1.19.2'
       - run: mix deps.get
+      - run: python3 -m venv .venv-a2a && .venv-a2a/bin/pip install -r test/fixtures/a2a/requirements.txt
       - run: mix check
       - run: python3 -m unittest discover -s test -p '*_test.py' -v
       - run: sh scripts/build-release.sh

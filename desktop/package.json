@@ -1,0 +1,6 @@
+{
+  "name": "manasprites-desktop-shell",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Tauri build root; the application is Phoenix LiveView and needs no npm runtime dependencies."
+}

@@ -15,7 +15,8 @@ defmodule Managoat.Sprite.Store do
       Repo,
       [
         {20_260_907_000_000, Managoat.Sprite.Repo.Migrations.Initialize},
-        {20_260_907_000_001, Managoat.Sprite.Repo.Migrations.AgentConfigurations}
+        {20_260_907_000_001, Managoat.Sprite.Repo.Migrations.AgentConfigurations},
+        {20_260_908_000_000, Managoat.Sprite.Repo.Migrations.A2ATasks}
       ],
       :up,
       all: true,
@@ -54,6 +55,9 @@ defmodule Managoat.Sprite.Store do
         {:reply, {:error, reason}, state}
     end
   end
+
+  defp operate({:a2a_snapshot, id}), do: Managoat.Sprite.A2A.Projection.snapshot(id)
+  defp operate({:a2a_list, params}), do: Managoat.Sprite.A2A.Projection.list(params)
 
   defp operate(:identity),
     do: rows("SELECT identity FROM installation WHERE id=1") |> hd() |> hd()
@@ -131,9 +135,7 @@ defmodule Managoat.Sprite.Store do
   end
 
   defp operate({:admit, id, attrs, key}) do
-    operation = if id, do: "prompt:" <> id, else: "create"
-    fingerprint = digest(:erlang.term_to_binary(Enum.sort(attrs)))
-    scoped = if key, do: operation <> ":" <> key
+    {scoped, fingerprint} = admission_key(id, attrs, key)
 
     case scoped &&
            rows("SELECT fingerprint,response,deleted FROM idempotency WHERE key=?", [scoped]) do
@@ -145,9 +147,7 @@ defmodule Managoat.Sprite.Store do
   end
 
   defp operate({:replay, id, attrs, key}) do
-    operation = if id, do: "prompt:" <> id, else: "create"
-    fingerprint = digest(:erlang.term_to_binary(Enum.sort(attrs)))
-    scoped = if key, do: operation <> ":" <> key
+    {scoped, fingerprint} = admission_key(id, attrs, key)
 
     case scoped &&
            rows("SELECT fingerprint,response,deleted FROM idempotency WHERE key=?", [scoped]) do
@@ -158,8 +158,26 @@ defmodule Managoat.Sprite.Store do
     end
   end
 
+  defp operate({:cancel_requested, tid}) do
+    case operate(:active) do
+      %{"id" => ^tid} = t ->
+        query("UPDATE turns SET record=? WHERE id=?", [
+          Jason.encode!(Map.put(t, "cancel_requested", true)),
+          tid
+        ])
+
+        :ok
+
+      _ ->
+        {:error, :not_active}
+    end
+  end
+
   defp operate({:dispatch, turn_id, request_id}) do
     case operate(:active) do
+      %{"id" => ^turn_id, "cancel_requested" => true} ->
+        {:error, :cancel_requested}
+
       %{"id" => ^turn_id, "phase" => "pending"} = t ->
         t =
           Map.merge(t, %{
@@ -216,7 +234,11 @@ defmodule Managoat.Sprite.Store do
       Jason.encode!(p)
     ])
 
-    :ok
+    event(cid, tid, %{
+      "kind" => "permission",
+      "stream" => "permission",
+      "data" => Jason.encode!(%{"id" => rid, "status" => "pending"})
+    })
   end
 
   defp operate({:resolve, cid, rid, option}) do
@@ -232,7 +254,7 @@ defmodule Managoat.Sprite.Store do
           true ->
             p = Map.merge(p, %{"status" => "resolved", "option_id" => option})
             query("UPDATE permissions SET record=? WHERE id=?", [Jason.encode!(p), rid])
-            :ok
+            permission_resolved(p)
         end
 
       _ ->
@@ -246,6 +268,8 @@ defmodule Managoat.Sprite.Store do
         Jason.encode!(Map.put(p, "status", "resolved")),
         rid
       ])
+
+      permission_resolved(p)
     end
 
     :ok
@@ -375,6 +399,19 @@ defmodule Managoat.Sprite.Store do
             do: %{"status" => "queued"},
             else: %{"data" => c, "meta" => %{"resumed" => false}}
 
+        response =
+          if attrs["a2a_message_id"] do
+            query("INSERT INTO a2a_tasks(id,message_id,updated_at) VALUES(?,?,?)", [
+              tid,
+              attrs["a2a_message_id"],
+              t["inserted_at"]
+            ])
+
+            %{"task_id" => tid, "context_id" => c["id"]}
+          else
+            response
+          end
+
         if key,
           do:
             query(
@@ -490,7 +527,25 @@ defmodule Managoat.Sprite.Store do
       Jason.encode!(e)
     ])
 
+    Managoat.Sprite.A2A.Projection.record(tid, e, operate(:latest))
     :ok
+  end
+
+  defp admission_key(id, attrs, {:a2a, message_id}) do
+    {"a2a:" <> message_id, digest(:erlang.term_to_binary({id, attrs}))}
+  end
+
+  defp admission_key(id, attrs, key) do
+    operation = if id, do: "prompt:" <> id, else: "create"
+    {if(key, do: operation <> ":" <> key), digest(:erlang.term_to_binary(Enum.sort(attrs)))}
+  end
+
+  defp permission_resolved(p) do
+    event(p["conversation_id"], p["turn_id"], %{
+      "kind" => "permission",
+      "stream" => "permission",
+      "data" => Jason.encode!(%{"id" => p["id"], "status" => "resolved"})
+    })
   end
 
   @impl true

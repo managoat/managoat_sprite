@@ -4,7 +4,7 @@ set -eu
 umask 077
 MANAGOAT_ROOT=${MANAGOAT_ROOT:-"$HOME/.local/share/managoat"}
 export MANAGOAT_ROOT
-version=0.1.0
+version=0.1.2
 explicit_version=false
 download_only=false
 stage_only=false

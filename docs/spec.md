@@ -2,6 +2,11 @@
 
 Status: implementation target; see acceptance.md for current verification. Written 2026-09-07.
 
+The laptop fleet application is specified separately in [desktop.md](desktop.md).
+Its local Phoenix LiveView UI, OTP supervisors and Ecto/SQLite state extend the
+host product; they do not change this document's single-Sprite service contract.
+The web UI/fleet deferrals below apply to the service's original release scope.
+
 ## Product contract
 
 Provision a Sprite, run one installation command inside it, and that computer now serves Managoat's conversations API. The installer supplies the application and its runtime dependencies, configures one agent, registers a persistent HTTP service, and verifies readiness. The operator supplies inference credentials and chooses the workspace. No Fountain account, external database, Elixir toolchain, or Managoat control plane is required.
@@ -294,7 +299,12 @@ Upgrade downloads and checks the candidate before changing the active release. R
 
 `backup` requires an idle installation and temporarily blocks admission. Use SQLite's backup API and capture configuration and supported runtime session files in a consistent archive; exclude API keys and inference credentials by default, listing omitted files in the manifest. Include workspace only with an explicit option. The archive is sensitive because conversations and runtime files can contain private content. Restore is an offline operation to an empty state directory, with schema validation and new API keys.
 
-Every bearer key grants owner access to this installation. CORS defaults to no cross-origin browser access; explicit origin entries enable the templates and allow Authorization, Content-Type, Last-Event-ID, and Idempotency-Key. Handle preflight without requiring a bearer token and do not reflect arbitrary origins. API limits apply before parsing large bodies. The service is an authenticated remote-code-execution authority by design, through the configured agent.
+Every bearer key grants owner access to this installation. When explicitly enabled
+with an operator-verified HTTPS origin, the A2A discovery card at
+/.well-known/agent-card.json is the only additional anonymous route. It exposes
+fixed coding metadata and authentication requirements; POST /a2a and all task
+access still require the full-authority bearer key. A2A does not provide scoped
+delegation, a file API or a desktop relay. See [a2a.md](a2a.md). CORS defaults to no cross-origin browser access; explicit origin entries enable the templates and allow Authorization, Content-Type, Last-Event-ID, and Idempotency-Key. Handle preflight without requiring a bearer token and do not reflect arbitrary origins. API limits apply before parsing large bodies. The service is an authenticated remote-code-execution authority by design, through the configured agent.
 
 The service and agent share a trust domain. Local credentials, transcripts and approval controls are not protected from an agent with equivalent OS privileges. `ask` is an interaction policy, not a hardened independent authorization system. If protected credential injection is needed, run `managoat_broker` beyond that boundary and configure egress separately. The initial product does not install the broker or promise multitenant isolation.
 
@@ -342,3 +352,17 @@ Local code inspected for this proposal:
 - [Fountain router](https://github.com/BinaryBourbon/fountain/blob/main/apps/fountain/lib/fountain_web/router.ex), [conversation controller](https://github.com/BinaryBourbon/fountain/blob/main/apps/fountain/lib/fountain_web/controllers/conversation_controller.ex), [serializer](https://github.com/BinaryBourbon/fountain/blob/main/apps/fountain/lib/fountain_web/controllers/conversation_json.ex), and [global events controller](https://github.com/BinaryBourbon/fountain/blob/main/apps/fountain/lib/fountain_web/controllers/events_controller.ex): current API shapes and error semantics. These are local inspection links; the implementation should pin a source revision in its compatibility fixtures.
 
 This specification makes no claim that the proposed installer, server, local adapter, or recovery behavior already exists. Existing library and platform behavior is cited separately from the proposed host application.
+
+## A2A 1.0 adapter (0.1.2 preview)
+
+The service now implements an opt-in A2A JSON-RPC adapter inside the existing
+engine. A2A contexts map to conversations and tasks to individual turns; the
+single active-turn rule remains. The [wire/configuration contract](a2a.md) and
+[qualification record](a2a-brief.md#implementation-and-qualification-record)
+separate source behavior from released/live acceptance.
+
+Optional a2a configuration persists enabled (default false), external_origin
+(default null), origin_verified (default false), and ingress (default private).
+The verification flag records an explicit operator check; the service never
+derives an origin from request headers or changes platform URL authentication.
+Apply the full configuration through managoat configure --file PATH.
