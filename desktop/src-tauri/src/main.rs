@@ -77,6 +77,9 @@ fn main() {
                                     if valid {
                                         let script = format!("({})({});", include_str!("smoke_fleet.js"), serde_json::to_string(&urls).unwrap());
                                         if let Some(window) = handle.get_webview_window("main") {
+                                            // Clipboard operations require the native window to be
+                                            // focused, including on a fresh hosted macOS desktop.
+                                            window.set_focus().ok();
                                             window.eval(&script).ok();
                                         }
                                     }

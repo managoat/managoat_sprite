@@ -59,10 +59,20 @@ async function (fixtures) {
       await select(name);
       await wait(() => find("#send:not([disabled])"));
     }
-    stage = "copy A2A card URL";
+    stage = "A2A card URL discovery";
     await wait(() => find("#agent-card-url")?.value === "https://agent.example/.well-known/agent-card.json");
+    stage = "A2A clipboard window focus";
+    await wait(() => document.hasFocus());
+    stage = "copy A2A card URL";
     await click("#copy-agent-card-url");
-    await wait(() => find("#agent-card-copy-status")?.textContent === "URL copied");
+    await wait(() => {
+      const status = find("#agent-card-copy-status")?.textContent;
+      if (status === "Select and copy the URL above.") {
+        stage = "A2A clipboard write rejected";
+        throw new Error("clipboard rejected");
+      }
+      return status === "URL copied";
+    });
     await report("Native fleet: connections and A2A copy passed");
     stage = "independent approvals";
     for (const name of ["Alpha", "Beta"]) {
