@@ -74,6 +74,7 @@ macOS shell and embeds the Elixir runtime.
 - [Desktop development and build guide](desktop/README.md)
 - [Architecture and delivery plan](docs/desktop.md)
 - [Sprite service development](docs/development.md) and [API specification](docs/spec.md#http-contract)
+- [Optional Fountain-compatible host API](docs/fountain-api.md) for Sprites with Codex/Claude
 - [Optional CLI guide](docs/cli.md) for terminal workflows and scripts
 
 Built with [Managoat ACP](https://github.com/managoat/managoat_acp),

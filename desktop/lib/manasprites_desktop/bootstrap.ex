@@ -15,7 +15,8 @@ defmodule ManaspritesDesktop.Bootstrap do
         {20_260_908_000_000, ManaspritesDesktop.Repo.Migrations.CreateFleet},
         {20_260_908_010_000, ManaspritesDesktop.Repo.Migrations.LocalConnections},
         {20_260_908_020_000, ManaspritesDesktop.Repo.Migrations.PlatformJobs},
-        {20_260_908_030_000, ManaspritesDesktop.Repo.Migrations.PrivateConnections}
+        {20_260_908_030_000, ManaspritesDesktop.Repo.Migrations.PrivateConnections},
+        {20_260_908_040_000, ManaspritesDesktop.Repo.Migrations.FountainAPI}
       ],
       :up,
       all: true,

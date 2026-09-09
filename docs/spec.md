@@ -366,3 +366,13 @@ Optional a2a configuration persists enabled (default false), external_origin
 The verification flag records an explicit operator check; the service never
 derives an origin from request headers or changes platform URL authentication.
 Apply the full configuration through managoat configure --file PATH.
+
+## Optional host-side Fountain API
+
+The host application now has an opt-in Fountain-compatible API for account-owned
+ephemeral Sprites, documented in [fountain-api.md](fountain-api.md). Its account,
+provisioning and cleanup contract is separate from this document's single-Sprite
+service contract: host-created ephemeral Sprites are destroyed on termination;
+existing service conversations continue to preserve their adopted workspace.
+The guide distinguishes implemented behavior, local conformance execution and
+remaining live qualification. No full Fountain server or account is required.

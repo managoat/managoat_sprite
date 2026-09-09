@@ -12,7 +12,7 @@ defmodule ManaspritesDesktop.Application do
     File.mkdir_p!(root)
     File.chmod!(root, 0o700)
 
-    [
+    core = [
       {ManaspritesDesktop.Repo, database: Path.join(root, "fleet.sqlite3")},
       ManaspritesDesktop.Bootstrap,
       ManaspritesDesktop.Vault,
@@ -21,11 +21,29 @@ defmodule ManaspritesDesktop.Application do
       {Task.Supervisor, name: ManaspritesDesktop.Jobs},
       {DynamicSupervisor, strategy: :one_for_one, name: ManaspritesDesktop.ConnectionSupervisor},
       ManaspritesDesktop.Recovery,
-      ManaspritesDesktop.Platform,
+      ManaspritesDesktop.Platform
+    ]
+
+    ui = [
       {ElixirKit.PubSub,
        connect: System.get_env("ELIXIRKIT_PUBSUB") || :ignore, on_exit: &System.stop/0},
       ManaspritesDesktopWeb.Endpoint,
       ManaspritesDesktop.Shell
     ]
+
+    api =
+      case Application.get_env(:manasprites_desktop, :fountain_port) do
+        nil ->
+          []
+
+        port ->
+          [
+            ManaspritesDesktop.Fountain.Supervisor,
+            {Bandit, plug: ManaspritesDesktop.Fountain.HTTP, ip: {127, 0, 0, 1}, port: port}
+          ]
+      end
+
+    core ++
+      api ++ if(Application.get_env(:manasprites_desktop, :headless, false), do: [], else: ui)
   end
 end

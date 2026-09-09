@@ -20,3 +20,9 @@ config :manasprites_desktop, ManaspritesDesktopWeb.Endpoint,
   url: [host: "127.0.0.1"],
   check_origin: :conn,
   secret_key_base: Base.encode64(:crypto.strong_rand_bytes(64))
+
+config :manasprites_desktop, headless: System.get_env("MANASPRITES_HEADLESS") == "true"
+
+if port = System.get_env("MANASPRITES_API_PORT") do
+  config :manasprites_desktop, fountain_port: String.to_integer(port)
+end

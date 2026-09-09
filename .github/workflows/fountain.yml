@@ -1,0 +1,39 @@
+name: Fountain API conformance
+on:
+  pull_request:
+    paths: ['desktop/**', 'lib/**', 'scripts/fountain-openapi.py', 'scripts/provision_remote.py', 'mix.*', '.github/workflows/fountain.yml']
+  push:
+    branches: [main]
+    paths: ['desktop/**', 'lib/**', 'scripts/fountain-openapi.py', 'scripts/provision_remote.py', 'mix.*', '.github/workflows/fountain.yml']
+permissions:
+  contents: read
+jobs:
+  conformance:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: BinaryBourbon/fountain
+          ref: 01ed20a38d39be9c72fcb2828047f1cce7a6bb55
+          path: .fountain-contract
+          persist-credentials: false
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '28.4'
+          elixir-version: '1.19.5'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: mix deps.get
+        working-directory: desktop
+      - name: Verify advertised wire shapes are reproducible
+        run: |
+          python3 scripts/fountain-openapi.py .fountain-contract/sdk/contract/contract.json
+          git diff --exit-code -- desktop/priv/fountain/openapi.json
+      - name: Test host API, real service processes and ACP against unchanged deployed profiles
+        working-directory: desktop
+        env:
+          FOUNTAIN_CHECKOUT: ${{ github.workspace }}/.fountain-contract
+        run: mix check

@@ -103,6 +103,112 @@ defmodule ManaspritesDesktop.PlatformTest do
     %{fixture: fixture, root: root}
   end
 
+  test "Fountain provisions through private ingress, reads bounded bytes, and refuses replacement Sprite cleanup",
+       %{fixture: fixture, root: root} do
+    alias ManaspritesDesktop.Fountain
+    alias Fountain.{Accounts, Store, Sprites}
+    start_supervised!(Fountain.Supervisor)
+
+    account =
+      Accounts.import(
+        "api@example.test",
+        "synthetic-api-account-key-0123456789",
+        %{
+          "sprites" => "test-org/token/synthetic-secret",
+          "openai" => "synthetic-model-key"
+        },
+        true
+      )
+
+    owner = account["id"]
+    Agent.update(fixture, &Map.put(&1, :write_installed_config, true))
+
+    {:ok, environment} =
+      Fountain.create(owner, "environment", %{
+        "name" => "env",
+        "env_vars" => %{"EXAMPLE" => "synthetic-env"}
+      })
+
+    {:ok, agent} =
+      Fountain.create(owner, "agent", %{
+        "name" => "api",
+        "runtime" => "codex",
+        "model" => "openai/gpt-5.4",
+        "environment_id" => environment["id"]
+      })
+
+    {:ok, c} = Fountain.create_conversation(owner, %{"agent_id" => agent["id"]})
+    eventually(fn -> assert Store.get(owner, "conversation", c["id"])["_phase"] == "idle" end)
+    assert_receive {:setup_received, names}
+    assert Enum.sort(names) == ["EXAMPLE", "OPENAI_API_KEY"]
+    current = Store.get(owner, "conversation", c["id"])
+    name = current["sandbox"]["sprite_name"]
+    assert Agent.get(fixture, & &1.creates) == 1
+    assert Agent.get(fixture, &get_in(&1, [:sprites, name, "url_settings", "auth"])) == "sprite"
+    project = Path.join(root, "project")
+    File.mkdir_p!(project)
+    File.write!(Path.join(project, "binary.bin"), <<0, 255, 1, 2>>)
+
+    assert {:ok, %{"encoding" => "base64", "content" => encoded, "truncated" => true}} =
+             Sprites.file(owner, current, "binary.bin", 2)
+
+    assert Base.decode64!(encoded) == <<0, 255>>
+    File.ln_s!(Path.join(root, "outside"), Path.join(project, "link"))
+    assert {:error, :file_unavailable} = Sprites.file(owner, current, "link", 1024)
+    Agent.update(fixture, &put_in(&1, [:sprites, name, "id"], "replacement"))
+    assert {:error, :sprite_identity_changed} = Sprites.destroy(owner, current)
+    refute_receive {:platform_request, "DELETE", _}, 100
+    Agent.update(fixture, &put_in(&1, [:sprites, name, "id"], current["_sprite_id"]))
+    assert {:ok, _} = Fountain.terminate(owner, c["id"])
+
+    eventually(fn ->
+      assert Store.get(owner, "conversation", c["id"])["sandbox"]["status"] == "terminated"
+    end)
+
+    assert is_nil(Agent.get(fixture, & &1.sprites[name]))
+    assert File.read!(Path.join(project, "binary.bin")) == <<0, 255, 1, 2>>
+  end
+
+  test "Fountain retains cleanup uncertainty after a lost create acknowledgement", %{
+    fixture: fixture
+  } do
+    alias ManaspritesDesktop.Fountain
+    alias Fountain.{Accounts, Store, Sprites}
+    start_supervised!(Fountain.Supervisor)
+
+    owner =
+      Accounts.import(
+        "api@example.test",
+        "synthetic-api-account-key-0123456789",
+        %{
+          "sprites" => "test-org/token/synthetic-secret",
+          "openai" => "synthetic-model-key"
+        },
+        true
+      )["id"]
+
+    Agent.update(fixture, &%{&1 | lose_create: true})
+
+    {:ok, agent} =
+      Fountain.create(owner, "agent", %{
+        "name" => "api",
+        "runtime" => "codex",
+        "model" => "openai/gpt-5.4"
+      })
+
+    {:ok, c} = Fountain.create_conversation(owner, %{"agent_id" => agent["id"]})
+    eventually(fn -> assert Store.get(owner, "conversation", c["id"])["_phase"] == "failed" end)
+    current = Store.get(owner, "conversation", c["id"])
+    name = current["sandbox"]["sprite_name"]
+    info = Agent.get(fixture, & &1.sprites[name])
+    Agent.update(fixture, &%{&1 | sprites: %{}})
+    assert {:error, :creation_outcome_unknown} = Sprites.destroy(owner, current)
+    assert Store.get(owner, "conversation", c["id"])["sandbox"]["status"] == "pending"
+    Agent.update(fixture, &put_in(&1, [:sprites, name], info))
+    assert :ok = Sprites.destroy(owner, current)
+    assert Agent.get(fixture, & &1.creates) == 1
+  end
+
   test "LiveView discovers every page and creates an agent that can accept real ACP work", %{
     fixture: fixture
   } do
