@@ -13,10 +13,15 @@ document.addEventListener("click", async event => {
   const status = document.getElementById("agent-card-copy-status");
   if (!input || !status) return;
   let copied = false;
-  // Selection fallback also works in the native WebKit shell.
-  input.focus();
-  input.select();
-  try { copied = document.execCommand("copy"); } catch (_) {}
+  // Native WebKit may reject browser clipboard APIs even in a focused window.
+  if (window.__TAURI__) {
+    try { await window.__TAURI__.core.invoke("copy_agent_card_url", {url: input.value}); copied = true; } catch (_) {}
+  }
+  if (!copied) {
+    input.focus();
+    input.select();
+    try { copied = document.execCommand("copy"); } catch (_) {}
+  }
   if (!copied && navigator.clipboard) {
     try { await navigator.clipboard.writeText(input.value); copied = true; } catch (_) {}
   }

@@ -7,7 +7,17 @@
     "beforeBuildCommand": "sh scripts/prepare-release.sh"
   },
   "app": {
-    "security": {"csp": null}
+    "withGlobalTauri": true,
+    "security": {
+      "csp": null,
+      "capabilities": [{
+        "identifier": "agent-card-clipboard",
+        "windows": ["main"],
+        "local": false,
+        "remote": {"urls": ["http://127.0.0.1:*"]},
+        "permissions": ["allow-copy-agent-card-url"]
+      }]
+    }
   },
   "bundle": {
     "active": true,

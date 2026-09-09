@@ -9,5 +9,8 @@ fn main() {
         println!("cargo:rustc-link-lib=framework=AppKit");
         println!("cargo:rerun-if-changed=src/snapshot.m");
     }
-    tauri_build::build();
+    tauri_build::try_build(
+        tauri_build::Attributes::new()
+            .app_manifest(tauri_build::AppManifest::new().commands(&["copy_agent_card_url"])),
+    ).expect("native application build failed");
 }

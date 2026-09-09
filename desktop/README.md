@@ -39,6 +39,9 @@ screenshots use synthetic demo data from the native workflow test.
   Ambiguous submissions require explicit review; they are never silently replayed.
   Idle agents receive no background polling, including after app restart.
 - Native macOS WebKit window hosting an embedded OTP release.
+- A2A agent card discovery and URL-only copying for trusted peers. Native clipboard
+  access accepts only credential-free HTTPS card URLs; browser clipboard refusal
+  does not prevent copying from the app.
 - Random loopback port, per-launch authentication, same-origin WebSocket checks,
   CSRF protection and private local data files.
 - Native-host/BEAM lifetime coupling through ElixirKit.
@@ -57,7 +60,7 @@ Choose **Add a Sprite**, enter the organization matching that token, choose Code
 or Claude, and optionally supply an HTTPS repository, Git ref and instructions.
 The saved GitHub key is used only when explicitly selected for the clone.
 
-Creation installs service [0.1.1](https://github.com/managoat/manasprites/releases/tag/v0.1.1)
+Creation installs service [0.1.2](https://github.com/managoat/manasprites/releases/tag/v0.1.2)
 at `/home/sprite/project`, port 8080. Codex uses human approval review so offered
 requests reach the service's configured ask/allow/deny policy. A fresh 0.1.1
 installation passed the live approval round trip without an environment override.

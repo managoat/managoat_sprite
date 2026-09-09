@@ -8,6 +8,36 @@ use tauri::Manager;
 #[cfg(target_os = "macos")]
 extern "C" {
     fn manasprites_snapshot(webview: *mut std::ffi::c_void, destination: *const std::ffi::c_char);
+    fn manasprites_copy_card_url(value: *const std::ffi::c_char) -> bool;
+}
+
+#[tauri::command]
+fn copy_agent_card_url(window: tauri::WebviewWindow, url: String) -> Result<(), &'static str> {
+    let origin = window.url().map_err(|_| "invalid_window")?;
+    if window.label() != "main" || origin.scheme() != "http" || origin.host_str() != Some("127.0.0.1") {
+        return Err("invalid_window");
+    }
+    let card = tauri::Url::parse(&url).map_err(|_| "invalid_card_url")?;
+    let domain = card.domain().unwrap_or_default();
+    if url.len() > 2048 || card.scheme() != "https" || !domain.contains('.')
+        || [".localhost", ".local", ".internal"].iter().any(|suffix| domain.ends_with(suffix))
+        || !card.username().is_empty() || card.password().is_some()
+        || card.path() != "/.well-known/agent-card.json"
+        || card.query().is_some() || card.fragment().is_some()
+    {
+        return Err("invalid_card_url");
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let value = std::ffi::CString::new(url).map_err(|_| "invalid_card_url")?;
+        if unsafe { manasprites_copy_card_url(value.as_ptr()) } {
+            Ok(())
+        } else {
+            Err("clipboard_unavailable")
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    Err("clipboard_unavailable")
 }
 
 fn main() {
@@ -15,6 +45,7 @@ fn main() {
     let child = Arc::new(Mutex::new(None::<std::process::Child>));
     let owned_child = child.clone();
     let app = tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![copy_agent_card_url])
         .setup(move |app| {
             let handle = app.handle().clone();
             let smoke_renamed = AtomicBool::new(false);
@@ -77,9 +108,6 @@ fn main() {
                                     if valid {
                                         let script = format!("({})({});", include_str!("smoke_fleet.js"), serde_json::to_string(&urls).unwrap());
                                         if let Some(window) = handle.get_webview_window("main") {
-                                            // Clipboard operations require the native window to be
-                                            // focused, including on a fresh hosted macOS desktop.
-                                            window.set_focus().ok();
                                             window.eval(&script).ok();
                                         }
                                     }

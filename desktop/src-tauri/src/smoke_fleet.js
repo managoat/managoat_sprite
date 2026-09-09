@@ -61,9 +61,13 @@ async function (fixtures) {
     }
     stage = "A2A card URL discovery";
     await wait(() => find("#agent-card-url")?.value === "https://agent.example/.well-known/agent-card.json");
-    stage = "A2A clipboard window focus";
-    await wait(() => document.hasFocus());
     stage = "copy A2A card URL";
+    // Reproduce WebKit's browser-clipboard refusal while exercising the native
+    // command through the real button. Python verifies the system pasteboard.
+    const browserCopy = document.execCommand;
+    const browserClipboard = navigator.clipboard.writeText;
+    document.execCommand = () => false;
+    navigator.clipboard.writeText = async () => { throw new Error("browser clipboard unavailable"); };
     await click("#copy-agent-card-url");
     await wait(() => {
       const status = find("#agent-card-copy-status")?.textContent;
@@ -73,6 +77,15 @@ async function (fixtures) {
       }
       return status === "URL copied";
     });
+    document.execCommand = browserCopy;
+    navigator.clipboard.writeText = browserClipboard;
+    stage = "native clipboard rejects credential URLs";
+    for (const url of ["https://user:synthetic@agent.example/.well-known/agent-card.json",
+      "https://agent.example/.well-known/agent-card.json?key=synthetic", "http://127.0.0.1/.well-known/agent-card.json"]) {
+      let rejected = false;
+      try { await window.__TAURI__.core.invoke("copy_agent_card_url", {url}); } catch (_) { rejected = true; }
+      if (!rejected) throw new Error("unsafe clipboard URL accepted");
+    }
     await report("Native fleet: connections and A2A copy passed");
     stage = "independent approvals";
     for (const name of ["Alpha", "Beta"]) {
