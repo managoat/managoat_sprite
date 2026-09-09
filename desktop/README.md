@@ -278,3 +278,11 @@ The existing `scripts/provision_remote.py` setup worker is compiled into the
 desktop release as source and executed only inside the Sprite over SDK stdin.
 It is shared remote installer tooling; the laptop backend remains Elixir and
 the installed macOS app has no Python runtime requirement.
+
+## Optional Fountain host API
+
+Set `MANASPRITES_API_PORT` to enable a separate loopback bearer API, or use
+`MANASPRITES_HEADLESS=true` to run the host without the native UI. It manages
+account-owned ephemeral Sprites independently of the desktop's existing agents.
+See the [Fountain API guide](../docs/fountain-api.md) for account import,
+configuration, supported routes, conformance commands and qualification limits.

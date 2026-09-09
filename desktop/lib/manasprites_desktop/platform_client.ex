@@ -29,7 +29,7 @@ defmodule ManaspritesDesktop.PlatformClient do
         {:error, :platform_response_limit}
 
       {:ok, %{status: status, body: raw}} when status in 200..299 ->
-        case Jason.decode(raw || "{}") do
+        case Jason.decode(if(raw in [nil, ""], do: "{}", else: raw)) do
           {:ok, data} when is_map(data) or is_list(data) -> {:ok, data}
           _ -> {:error, :platform_response_invalid}
         end

@@ -1,4 +1,5 @@
 """Read-only project inspector. Runs inside the Sprite; JSON stdin/stdout only."""
+import base64
 import codecs
 import hashlib
 import json
@@ -67,16 +68,19 @@ def listing(root_fd, path):
         os.close(fd)
 
 
-def read_file(root_fd, path):
+def read_file(root_fd, path, max_bytes=LIMIT, encoded=False):
     fd = open_path(root_fd, path)
     try:
         info = os.fstat(fd)
         if not stat.S_ISREG(info.st_mode):
             raise InspectionError('not_regular_file')
         with os.fdopen(os.dup(fd), 'rb') as file:
-            data = file.read(LIMIT + 1)
-        truncated = len(data) > LIMIT
-        data = data[:LIMIT]
+            data = file.read(max_bytes + 1)
+        truncated = len(data) > max_bytes
+        data = data[:max_bytes]
+        if encoded:
+            return {'content': base64.b64encode(data).decode('ascii'), 'encoding': 'base64',
+                    'size': info.st_size, 'truncated': truncated}
         try:
             if b'\0' in data:
                 raise UnicodeError()
@@ -173,6 +177,11 @@ def inspect(payload):
             data = listing(root_fd, path)
         elif action == 'file':
             data = read_file(root_fd, path)
+        elif action == 'api_file':
+            maximum = payload.get('max_bytes', LIMIT)
+            if type(maximum) is not int or not 0 < maximum <= LIMIT:
+                raise InspectionError('invalid_limit')
+            data = read_file(root_fd, path, maximum, encoded=True)
         elif action == 'status':
             data = changes(root)
         elif action == 'diff':

@@ -65,6 +65,10 @@ defmodule ManaspritesDesktop.PlatformFixture do
           info -> json(conn, 200, info)
         end
 
+      {"DELETE", ["v1", "sprites", name]} ->
+        Agent.update(state, &%{&1 | sprites: Map.delete(&1.sprites, name)})
+        send_resp(conn, 204, "")
+
       {"PUT", ["v1", "sprites", name]} ->
         {:ok, raw, conn} = read_body(conn)
         body = Jason.decode!(raw)

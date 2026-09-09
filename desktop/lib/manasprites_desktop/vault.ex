@@ -41,6 +41,7 @@ defmodule ManaspritesDesktop.Vault do
     do: Repo.exists?(from(c in ManaspritesDesktop.Credential, where: c.name == ^name))
 
   def put(name, value), do: GenServer.call(__MODULE__, {:put, name, value})
+  def unseal(name, bytes), do: GenServer.call(__MODULE__, {:unseal, name, bytes})
   def seal(name, value), do: GenServer.call(__MODULE__, {:seal, name, value})
   def get(name), do: GenServer.call(__MODULE__, {:get, name})
 
@@ -48,6 +49,22 @@ defmodule ManaspritesDesktop.Vault do
     do: Repo.delete_all(from(c in ManaspritesDesktop.Credential, where: c.name == ^name))
 
   @impl true
+  def handle_call(
+        {:unseal, name, <<iv::binary-size(12), tag::binary-size(16), cipher::binary>>},
+        _,
+        key
+      ) do
+    result =
+      case :crypto.crypto_one_time_aead(:aes_256_gcm, key, iv, cipher, name, tag, false) do
+        value when is_binary(value) -> {:ok, value}
+        _ -> {:error, :vault_corrupt}
+      end
+
+    {:reply, result, key}
+  end
+
+  def handle_call({:unseal, _, _}, _, key), do: {:reply, {:error, :vault_corrupt}, key}
+
   def handle_call({:seal, name, value}, _, key) do
     if is_binary(value) and byte_size(value) in 1..16384 and
          not String.contains?(value, ["\r", "\n", <<0>>]) do
